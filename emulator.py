@@ -84,6 +84,6 @@ if __name__ == "__main__":
 
 
         # 그냥 막아 일단 ㅋㅋㅋ
-        server_thread.join()
+        thread_client_req.join()
         client_req_server.shutdown()
         server_monitor_server.shutdown()
