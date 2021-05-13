@@ -7,6 +7,7 @@
 
 import socket
 import pickle
+from datetime import datetime
 import argparse
 
 
@@ -27,11 +28,15 @@ def main():
 
             image = f.read()
             meta_info = {
-                'image_id': '1234', 'image_size': len(image),
+                'image_id': image_file_path[-8:],
+                'image_size': len(image),
                 'requirement': {
                     'accuracy': 90,
                     'time': 3
                 },
+                'timestamps': {
+                    'created': datetime.now()
+                }
                 'initial_server': 0
             }
 
