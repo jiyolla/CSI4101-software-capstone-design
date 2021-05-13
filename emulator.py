@@ -32,7 +32,7 @@ def recvall(socket):
             break
         fragments.append(chunk)
     return b''.join(fragments)
-        
+
 
 class ClientRequestHandler(socketserver.BaseRequestHandler):
 

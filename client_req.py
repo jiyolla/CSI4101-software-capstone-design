@@ -14,8 +14,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--test', help='Perform local test', action='store_true')
     args = parser.parse_args()
-    
-    image_file_path = 'test.jpg'
+
+    image_file_path = 'data/image/ILSVRC2012_val_00000001.JPEG'
     with open(image_file_path, 'rb') as f:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if args.test:
@@ -26,10 +26,15 @@ def main():
             s.connect(server_address)
 
             image = f.read()
-            meta_info = {'image_id': '1234', 'image_size': len(image),
-                       'requirement': {'accuracy': 90, 'time': 3},
-                       'initial_server': 0}
-            
+            meta_info = {
+                'image_id': '1234', 'image_size': len(image),
+                'requirement': {
+                    'accuracy': 90,
+                    'time': 3
+                },
+                'initial_server': 0
+            }
+
             # A custom protocol
             # [4 bytes indicating image size] + [image] + [meta-info]
             s.sendall(len(image).to_bytes(4, 'big'))
