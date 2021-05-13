@@ -3,24 +3,39 @@
 #     1)Dataset ready - tiny-imagenet-200(
 #     2)Load training data and add id to request
 # 2. Generate Request
-#     Currently very messy image sending. Need fix.
 #     Sophiscated and Controlled periodic generation. 
 
 import socket
-import json
-import base64
+import pickle
+import argparse
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--test', help='Perform local test', action='store_true')
+    args = parser.parse_args()
+    
+    image_file_path = 'test.jpg'
+    with open(image_file_path, 'rb') as f:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if args.test:
+                server_address = 'localhost', 64000
+            else:
+                # Actual address of the server expected
+                server_address = '', 0
+            s.connect(server_address)
+
+            image = f.read()
+            meta_info = {'image_id': '1234', 'image_size': len(image),
+                       'requirement': {'accuracy': 90, 'time': 3},
+                       'initial_server': 0}
+            
+            # A custom protocol
+            # [4 bytes indicating image size] + [image] + [meta-info]
+            s.sendall(len(image).to_bytes(4, 'big'))
+            s.sendall(image)
+            s.sendall(pickle.dumps(meta_info))
 
 
 if __name__ == "__main__":
-    file = 'test.jpg'
-    with open(file, 'rb') as f:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            my_goorm_addr = ('3.36.64.61', 56472)
-            # ip, port = 'localhost', 64000
-            # sock.connect((ip, port))
-            sock.connect(my_goorm_addr)
-
-            message = {'image': base64.encodebytes(f.read()).decode('utf-8'), 'accuracy': 90, 'time': 3}
-            message = json.dumps(message)
-
-            sock.sendall(bytes(message, encoding='utf-8'))
+    main()

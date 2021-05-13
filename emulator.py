@@ -17,25 +17,38 @@ import requests
 import socket
 import threading
 import socketserver
-import base64
-import json
 import numpy as np
 from PIL import Image
 import io
+import pickle
+import json
+
+
+def recvall(socket):
+    fragments = []
+    while True:
+        chunk = socket.recv(1024)
+        if not chunk:
+            break
+        fragments.append(chunk)
+    return b''.join(fragments)
+        
 
 class ClientRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
-        fragments = []
-        while True: 
-            chunk = self.request.recv(1024)
-            if not chunk: 
-                break
-            fragments.append(chunk)
-        data = b''.join(fragments).decode('utf-8')
-        data = json.loads(data)
-        image = base64.b64decode(data['image'])
+        data = recvall(self.request)
         
+        # A custom protocol
+        # [4 bytes indicating image size] + [image] + [meta-info]
+        image_header_size = 4
+        # First 4 bytes as the image size
+        image_size = int.from_bytes(data[:image_header_size], 'big')
+        # Load image
+        image = data[image_header_size:image_size + image_header_size]
+        # Load meta-info
+        meta_info = pickle.loads(data[image_size + image_header_size:])
+
         # file = keras.utils.get_file('g.jpg', 'https://storage.googleapis.com/download.tensorflow.org/example_images/grace_hopper.jpg')
         # img = keras.preprocessing.image.load_img(file, target_size=[224, 224])
         img = Image.open(io.BytesIO(image)).resize((224, 224))
