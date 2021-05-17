@@ -29,3 +29,12 @@
 
 **DRL.py:**  
 Not considred yet.
+
+
+**Things To Do:**  
+0. Decide where drl server lives. Also it should be called load balancer which has a DRL solution.
+1. Make emulator switchable. That is the entire project could work without if all client/server are ready with proper config.
+2. Include dockerfile of the service server to make auto deployment. Also probably with some bash command for multiple docker each serving a single model.
+3. Objectize(Class) request metadata. There are some specific 'methods' involved with those data.
+4. Overhaul the content and structure of 'server_states'
+5. Implement DRL and start tuning.
