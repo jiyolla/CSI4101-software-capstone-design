@@ -64,18 +64,37 @@ class ClientRequestHandler(socketserver.BaseRequestHandler):
         # file = keras.utils.get_file('g.jpg', 'https://storage.googleapis.com/download.tensorflow.org/example_images/grace_hopper.jpg')
         # img = keras.preprocessing.image.load_img(file, target_size=[224, 224])
         img = Image.open(io.BytesIO(image)).resize((224, 224))
+        
         x = keras.preprocessing.image.img_to_array(img)
         x = keras.applications.mobilenet.preprocess_input(x[tf.newaxis, ...])
         data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
         headers = {"content-type": "application/json"}
         my_jetsonnano_address = '222.111.222.238:8501'
-        json_response = requests.post('http://' + my_jetsonnano_address + '/v1/models/img_clf/versions/2:predict', data=data, headers=headers)
+        # version = 
+        # json_response = requests.post('http://' + my_jetsonnano_address + '/v1/models/img_clf/versions/1:predict', data=data, headers=headers)
+        json_response = requests.post('http://' + my_jetsonnano_address + '/v1/models/MobileNet:predict', data=data, headers=headers)
         predictions = json.loads(json_response.text)
         print(keras.applications.mobilenet.decode_predictions(np.array(predictions['predictions'])))
-        
+
+        x = keras.preprocessing.image.img_to_array(img)
+        x = keras.applications.mobilenet_v2.preprocess_input(x[tf.newaxis, ...])
+        data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
+        json_response = requests.post('http://' + my_jetsonnano_address + '/v1/models/MobileNetV2:predict', data=data, headers=headers)
+        predictions = json.loads(json_response.text)
+        print(keras.applications.mobilenet_v2.decode_predictions(np.array(predictions['predictions'])))
+
+        x = keras.preprocessing.image.img_to_array(img)
+        x = keras.applications.densenet.preprocess_input(x[tf.newaxis, ...])
+        data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
+        json_response = requests.post('http://' + my_jetsonnano_address + '/v1/models/DenseNet169:predict', data=data, headers=headers)
+        predictions = json.loads(json_response.text)
+        print(keras.applications.densenet.decode_predictions(np.array(predictions['predictions'])))
+
+        meta_info['timestamps']['served'] = datetime.now()
+        response = keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))[0][0][0]
         # call evaluater to rate the response
-        # evaluater.rate(meta_info, response)
-        
+        evaluater.evaluate(meta_info, response)
+
         # feed back to DRL
 
 

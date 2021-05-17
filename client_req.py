@@ -16,7 +16,7 @@ def main():
     parser.add_argument('-t', '--test', help='Perform local test', action='store_true')
     args = parser.parse_args()
 
-    image_file_path = 'data/image/ILSVRC2012_val_00000001.JPEG'
+    image_file_path = 'data/image/ILSVRC2012_val_00000003.JPEG'
     with open(image_file_path, 'rb') as f:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if args.test:
@@ -28,7 +28,7 @@ def main():
 
             image = f.read()
             meta_info = {
-                'image_id': image_file_path[-8:],
+                'image_id': image_file_path[-23:],
                 'image_size': len(image),
                 'requirement': {
                     'accuracy': 90,
@@ -36,7 +36,7 @@ def main():
                 },
                 'timestamps': {
                     'created': datetime.now()
-                }
+                },
                 'initial_server': 0
             }
 
