@@ -7,11 +7,17 @@ df = pd.read_csv('data/LOC_val_solution.csv')
 
 
 def evaluate(metadata_req, res):
-    # Time measurement
-    time = metadata_req['timestamps']['served'] - metadata_req['timestamps']['accepted']
-    print(time)
+    # Time requirement
+    elapsed_time = metadata_req['timestamps']['served'] - metadata_req['timestamps']['accepted']
+    is_timely = metadata_req['requirement']['time'] >= elapsed_time
+    print(f'Elapsed time: {elapsed_time}')
+    print(f'Expected time: {metadata_req["requirement"]["time"]}')
+    print(f'is_timely: {is_timely}')
 
-    # Accuracy
+    # Accuracy requirement
     is_correct = res in df[df['ImageId'] == metadata_req['image_id']]['PredictionString'].to_string()
-    print(is_correct)
-    return time, is_correct
+    print(f'Image Id: {metadata_req["image_id"]}')
+    print(f'Ground truth: {df[df["ImageId"] == metadata_req["image_id"]]["PredictionString"].to_string()}')
+    print(f'Prediction: {res}')
+    print(f'is_correct: {is_correct}')
+    return is_timely, is_correct
