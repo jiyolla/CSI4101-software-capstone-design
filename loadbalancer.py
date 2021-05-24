@@ -55,6 +55,8 @@ class ClientRequestHandler(socketserver.BaseRequestHandler):
         # Load meta-info
         meta_info = pickle.loads(data[image_size + image_header_size:])
         meta_info['timestamps']['accepted'] = datetime.now()
+        
+        print(meta_info)
 
         # Send meta_info and server states to DRL
         # askDRL(meta_info, server_states)
