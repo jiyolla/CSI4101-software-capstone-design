@@ -32,6 +32,9 @@ def send_request(req, load_balancer_addr, evaluater_addr):
 
     json_response = requests.post(f'http://{server["address"]}/v1/models/{server["model"]}:predict', data=data, headers=headers)
     predictions = json.loads(json_response.text)
+    
+    # Introduce artifical network overhead here
+    # Do sth with region
     req.set_served(keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))[0][0][0])
     
     data = pickle.dumps(req)
@@ -58,9 +61,6 @@ def main():
             time = random.randint(1, 10)
             req = request.Request(region, image_id, accuracy, time)
             threads.append(executor.submit(send_request, req, load_balancer_addr, evaluater_addr))
-
-        for future in concurrent.futures.as_completed(threads):
-            print(future.result())
 
 
 if __name__ == "__main__":

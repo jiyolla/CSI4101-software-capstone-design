@@ -1,27 +1,34 @@
 import subprocess
 import socket
 import time
+import json
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # load_balancer_address = '3.36.64.61', 59931
-    load_balancer_address = 'localhost', 8001
+    load_balancer_address = 'localhost', 8002
     s.connect(load_balancer_address)
 
+    
+    # Collect server state info
     server_state = {
         'server_name': 'my_jetson_nano',
         'serving_address': '222:111:222:238:8501',
         'available_models': 'should be scanned automatically',
         'various_hardware_status': 'staic performance like total available mem and dynamic performance like gpu usage'
     }
-    
+
     # MODIFY the code to send the server_state instead of raw tegrastats
-    
     """
     p = subprocess.Popen('tegrastats', stdout=subprocess.PIPE)
     for line in iter(p.stdout.readline, b''):
         message = line
         sock.sendall(message)
     """
+
+
+    # Send it to monitoring server periodically
     while True:
         time.sleep(1)
-        s.sendall(b'hi!!!')
+        data = json.dumps(server_state).encode('utf-8')
+        s.sendall(len(data).to_bytes(4, 'big'))
+        s.sendall(data)

@@ -1,9 +1,22 @@
 import socket
 import threading
 import socketserver
+import json
 
 
-server_states = []
+server_states = {}
+
+
+def recvall(s, message_size):
+    fragments = []
+    while message_size > 0:
+        chunk = s.recv(message_size)
+        if not chunk:
+            return False
+        fragments.append(chunk)
+        message_size -= len(chunk)
+    return b''.join(fragments)
+
 
 class ServerMonitorHandler(socketserver.BaseRequestHandler):
     # This part should be moved to load_balancer.py
@@ -13,17 +26,15 @@ class ServerMonitorHandler(socketserver.BaseRequestHandler):
         # Instead of just pring raw tegratats
         reporting = True
         while reporting:
-            fragments = []
-            message_size = 5
-            while message_size > 0:
-                data = self.request.recv(message_size)
-                if not data:
-                    reporting = False
-                    break
-                else:
-                    fragments.append(data)
-                    message_size -= len(data)
-            print(f'received: {b"".join(fragments)}')
+            try:
+                message_size = int.from_bytes(recvall(self.request, 4), 'big')
+                server_state = json.loads(recvall(self.request, message_size))
+            except TypeError:
+                reporting = False
+                break
+            print(server_state)
+            with threading.Lock():
+                server_states[server_state['serving_address']] = server_state
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -39,7 +50,4 @@ if __name__ == "__main__":
         thread_server_monitor.daemon = True
         thread_server_monitor.start()
         print("Server loop running in thread:", thread_server_monitor.name)
-
-        # 그냥 막아 일단 ㅋㅋㅋ
         thread_server_monitor.join()
-        server_monitor_server.shutdown()
