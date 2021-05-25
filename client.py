@@ -10,7 +10,6 @@ from tensorflow import keras
 import tensorflow as tf
 import numpy as np
 import json
-import pickle
 from datetime import datetime, timedelta
 import random
 import concurrent.futures
@@ -40,26 +39,26 @@ class Request:
 
 def send_request(request):
     # 1. Send request meta-data to load balancer to get serving server address
-    # 2. Send actual request to serving server
-    
     res = requests.get('http://localhost:8000')
     server = json.loads(res.text)
     request.set_allocated()
-        
+    
+
+    # 2. Send actual request to serving server
+
     # Pre-processing based on the model.
     # Maybe it should be done the server side. There are pros and cons.
-    
+
     # Should be modfied to adapt to the model
     img = keras.preprocessing.image.load_img(request.image_path, target_size=[224, 224])
     x = keras.preprocessing.image.img_to_array(img)
     x = keras.applications.mobilenet.preprocess_input(x[tf.newaxis, ...])
-    
-    
+
     data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
     headers = {"content-type": "application/json"}
     json_response = requests.post(f'http://{server["address"]}/v1/models/{server["model"]}:predict', data=data, headers=headers)
     predictions = json.loads(json_response.text)
-    response = keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))#[0][0][0]
+    response = keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))[0][0][0]
     request.set_served()
 
     return server['region'], response, request
@@ -69,7 +68,7 @@ def main():
     # parser = argparse.ArgumentParser()
     # parser.add_argument('-t', '--test', help='Perform local test', action='store_true')
     # args = parser.parse_args()
-    
+
     num_req = 10
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_req) as executor:
