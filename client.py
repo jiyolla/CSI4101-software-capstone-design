@@ -1,48 +1,21 @@
-# TBD
-# 1. Read Training Data
-#     1)Dataset ready - ILSVRC2012 validation dataset
-#     2)Load training data and add id to request
-#     3)Probably make the meta_info a class for better abstraction
-# 2. Generate Request
-#     Sophiscated and Controlled periodic generation
-
 from tensorflow import keras
 import tensorflow as tf
 import numpy as np
 import json
-from datetime import datetime, timedelta
+import pickle
 import random
 import concurrent.futures
 import requests
-import imagesize
+import request # our own definition
 # import argparse
 
 
-class Request:
-    def __init__(self, client_region, image_path, accuracy, time):
-        self.image_path = image_path
-        self.accuracy = accuracy
-        self.time = time
-        self.image_size = imagesize.get(image_path)
-        self.timestamps = {
-            'Created': datetime.now(),
-            'Allocated': None,
-            'Served': None
-        }
-
-    def set_allocated(self):
-        self.timestamps['Allocated'] = datetime.now()
-
-    def set_served(self):
-        self.timestamps['Served'] = datetime.now()
-
-
-def send_request(request):
+def send_request(req, load_balancer_addr, evaluater_addr):
     # 1. Send request meta-data to load balancer to get serving server address
-    res = requests.get('http://localhost:8000')
+    data = pickle.dumps(req)
+    res = requests.post(load_balancer_addr, data=data)
     server = json.loads(res.text)
-    request.set_allocated()
-    
+    req.set_allocated(server)
 
     # 2. Send actual request to serving server
 
@@ -50,18 +23,21 @@ def send_request(request):
     # Maybe it should be done the server side. There are pros and cons.
 
     # Should be modfied to adapt to the model
-    img = keras.preprocessing.image.load_img(request.image_path, target_size=[224, 224])
+    img = keras.preprocessing.image.load_img(req.image_path, target_size=[224, 224])
     x = keras.preprocessing.image.img_to_array(img)
     x = keras.applications.mobilenet.preprocess_input(x[tf.newaxis, ...])
-
     data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
     headers = {"content-type": "application/json"}
+    req.set_preprocessed()
+
     json_response = requests.post(f'http://{server["address"]}/v1/models/{server["model"]}:predict', data=data, headers=headers)
     predictions = json.loads(json_response.text)
-    response = keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))[0][0][0]
-    request.set_served()
+    req.set_served(keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))[0][0][0])
+    
+    data = pickle.dumps(req)
+    requests.post(evaluater_addr, data=data)
 
-    return server['region'], response, request
+    return request
 
 
 def main():
@@ -72,15 +48,16 @@ def main():
     num_req = 10
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_req) as executor:
+        load_balancer_addr = 'http://localhost:8000'
+        evaluater_addr = 'http://localhost:8001'
         threads = []
         for _ in range(num_req):
-            client_region = random.randrange(5)
-            image_number = random.randint(1, 100)
-            image_path = f'data/image/ILSVRC2012_val_{str(image_number).zfill(8)}.JPEG'
+            region = random.randrange(5)
+            image_id = f'ILSVRC2012_val_{str(random.randint(1, 100)).zfill(8)}'
             accuracy = random.uniform(0.5, 1)
-            time = timedelta(seconds=random.randint(1, 10))
-            request = Request(client_region, image_path, accuracy, time)
-            threads.append(executor.submit(send_request, request))
+            time = random.randint(1, 10)
+            req = request.Request(region, image_id, accuracy, time)
+            threads.append(executor.submit(send_request, req, load_balancer_addr, evaluater_addr))
 
         for future in concurrent.futures.as_completed(threads):
             print(future.result())

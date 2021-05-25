@@ -31,7 +31,7 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 if __name__ == "__main__":
-    addr_server_monitor = ('', 8001)
+    addr_server_monitor = ('', 8002)
 
     server_monitor_server = ThreadedTCPServer(addr_server_monitor, ServerMonitorHandler)
     with server_monitor_server:
