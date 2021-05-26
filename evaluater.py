@@ -13,7 +13,9 @@ results = []
 
 def report_to_drl(pipe_to_drl):
     while True:
-        time.sleep(0.5)
+        if not results:
+            time.sleep(0.1)
+            continue
         pipe_to_drl.send(results)
         with threading.Lock():
             results = []
@@ -45,7 +47,7 @@ class Handler(BaseHTTPRequestHandler):
         print(f'is_correct: {is_correct}\n')
         
         with threading.Lock():
-            results.append((is_correct, is_timely))
+            results.append((is_timely, is_correct))
 
     
 def run(addr, port, pipe_to_drl):

@@ -10,7 +10,7 @@ server_states = {}
 
 def report_to_drl(pipe_to_drl):
     while True:
-        time.sleep(0.5)
+        time.sleep(0.1)
         pipe_to_drl.send(server_states)
 
 

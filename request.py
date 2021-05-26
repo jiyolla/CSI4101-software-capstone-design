@@ -8,7 +8,7 @@ class Request:
         self.region = region
         self.image_id = image_id
         self.image_path = f'data/image/{image_id}.JPEG'
-        self.accuracy = accuracy
+        self.expected_accuracy = accuracy
         self.expected_time = timedelta(seconds=time)
         self.image_size = imagesize.get(self.image_path)
         self.timestamps = {
@@ -17,6 +17,9 @@ class Request:
             'Preprocessed': None,
             'Served': None
         }
+
+    def to_state(self):
+        return [self.region, self.image_size, self.expected_time.total_seconds(), self.expected_accuracy]
 
     def set_allocated(self, server):
         self.timestamps['Allocated'] = datetime.now()

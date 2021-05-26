@@ -11,7 +11,9 @@ answers = {}
 
 def queries_to_drl(pipe_to_drl):
     while True:
-        time.sleep(0.1)
+        if not queries:
+            time.sleep(0.1)
+            continue
         pipe_to_drl.send(queries)
         with threading.Lock():
             queries = []
