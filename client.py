@@ -48,7 +48,7 @@ def main():
     # parser.add_argument('-t', '--test', help='Perform local test', action='store_true')
     # args = parser.parse_args()
 
-    num_req = 10
+    num_req = 3
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_req) as executor:
         load_balancer_addr = 'http://localhost:8000'
