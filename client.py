@@ -6,8 +6,17 @@ import pickle
 import random
 import concurrent.futures
 import requests
+import time
 import request # our own definition
 # import argparse
+
+# Introduce extra delay by (delay * request size in MB)secs
+# Larger value indicate worser connection
+region_delay = {
+    0: {0: 0, 1: 0.5, 2: 1},
+    1: {0: 0.5, 1:0, 2: 0.75},
+    2: {0: 1, 1: 0.75, 2: 0}
+}
 
 
 def send_request(req, load_balancer_addr, evaluater_addr):
@@ -19,10 +28,8 @@ def send_request(req, load_balancer_addr, evaluater_addr):
 
     # 2. Send actual request to serving server
 
-    # Pre-processing based on the model.
-    # Maybe it should be done the server side. There are pros and cons.
-
-    # Should be modfied to adapt to the model
+    # Pre-processing. This should be moved to server side.
+    # Preprocessed data is about 30x larger.
     img = keras.preprocessing.image.load_img(req.image_path, target_size=[224, 224])
     x = keras.preprocessing.image.img_to_array(img)
     x = keras.applications.mobilenet.preprocess_input(x[tf.newaxis, ...])
@@ -32,11 +39,11 @@ def send_request(req, load_balancer_addr, evaluater_addr):
 
     json_response = requests.post(f'http://{server["address"]}/v1/models/{server["model"]}:predict', data=data, headers=headers)
     predictions = json.loads(json_response.text)
-    
+
     # Introduce artifical network overhead here
-    # Do sth with region
+    time.sleep(region_delay[req.region][server['region']] * len(data)/10*6)
     req.set_served(keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))[0][0][0])
-    
+
     data = pickle.dumps(req)
     requests.post(evaluater_addr, data=data)
 
@@ -55,7 +62,7 @@ def main():
         evaluater_addr = 'http://localhost:8001'
         threads = []
         for _ in range(num_req):
-            region = random.randrange(5)
+            region = random.randrange(3)
             image_id = f'ILSVRC2012_val_{str(random.randint(1, 100)).zfill(8)}'
             accuracy = random.uniform(0.5, 1)
             time = random.randint(1, 10)

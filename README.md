@@ -1,24 +1,19 @@
 ## A network-aware load balancer using DRL
 
 ### Scenario:
-1. Clients send request to an edge server and the request metadata to DRL load balancer.
-2. DRL load balancer decide where the request should actually be handled and send the control message to serving servers.
-3. Serving server enqueue client request and either transfer or handle requests upon DRL load balancer's command.
+1. Client query load balancing server for inferencing server address.
+2. Load balancer return serving address using DRL.
+3. Client send actual request to inferencing server.
+4. Add artifical network overhead upon receiving inferencing response.
+5. Return overall results to evaluater to generate reward for DRL.
 
 
-### Scenario with emulator:
-1. ".
-2. ". The network bandwidth of each server is artificially compromised.
-3. ". Request transfer between serving servers is delayed accoridngly.
+### Things To Do
+1. Implement DRL and tune it.
 
-
-### Things To D
-1. Make emulator switchable. That is the entire project could work without emulator if all clients/servers are properly set.
-2. Overhaul the content and structure of 'server_states'
-3. Implement DRL and tune it.
-
-4. Objectize(Class) request metadata. There are some specific 'methods' involved with those data.
-5. Include dockerfile of the service server to automate deployment. Also probably include some bash command for multiple docker each serving a single model.
+2. Automate deployment.
+    1. Include dockerfile of the service server. Also probably include some bash command for multiple docker each serving a single model.
+    2. Install prerequisite.
 
 **client.py:**  
 1. Load ImageNet validation images.
