@@ -13,7 +13,7 @@
 
 2. Automate deployment.
     1. Include dockerfile of the service server. Also probably include some bash command for multiple docker each serving a single model.
-    2. Install prerequisite.
+    2. Scripts to install prerequisite.
 
 **client.py:**  
 1. Load ImageNet validation images.
@@ -28,11 +28,17 @@
 
 **evaluater.py:**  
 1. Load ImageNet validation solutions.
-2. Identify request and rate correspoding service response by accuracy&time.
+2. Listen from client response reports and parse feed to drl.py
 
-**reportmonitor.py:**  
+**servermonitor.py**  
+1. Listen for state reports from servermonitor.py
+2. Send gathered state reports to drl.py
+
+**reportstate.py:**  
 1. Collect server's state.
 2. Send it to servermonitor.py.
 
-**DRL.py:**  
-Not considred yet.
+**drl.py:**  
+1. Uses request and server_state as state
+2. DQN to aprox. q function
+3. Return server/model as action
