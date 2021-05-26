@@ -1,6 +1,7 @@
 import imagesize
 from datetime import datetime, timedelta
 
+
 class Request:
     def __init__(self, region, image_id, accuracy, time):
         self.region = region

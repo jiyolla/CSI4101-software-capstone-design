@@ -1,4 +1,3 @@
-from tensorflow import keras
 import tensorflow as tf
 import numpy as np
 import json
@@ -14,7 +13,7 @@ import request # our own definition
 # Larger value indicate worser connection
 region_delay = {
     0: {0: 0, 1: 0.5, 2: 1},
-    1: {0: 0.5, 1:0, 2: 0.75},
+    1: {0: 0.5, 1: 0, 2: 0.75},
     2: {0: 1, 1: 0.75, 2: 0}
 }
 
@@ -27,12 +26,15 @@ def send_request(req, load_balancer_addr, evaluater_addr):
     req.set_allocated(server)
 
     # 2. Send actual request to serving server
-
     # Pre-processing. This should be moved to server side.
     # Preprocessed data is about 30x larger.
-    img = keras.preprocessing.image.load_img(req.image_path, target_size=[224, 224])
-    x = keras.preprocessing.image.img_to_array(img)
-    x = keras.applications.mobilenet.preprocess_input(x[tf.newaxis, ...])
+    model = eval(f'tf.keras.applications.{server["model"]}')
+    model_group = eval(f'tf.keras.applications.{server["model_group"]}')
+    h, w = map(int, model.__doc__.split('input_shape: ')[1].split('`(')[1].split(',')[:2])
+    img = tf.keras.preprocessing.image.load_img(req.image_path, target_size=[h, w])
+    x = tf.keras.preprocessing.image.img_to_array(img)
+    x = model_group.preprocess_input(x[tf.newaxis, ...])
+    # x = tf.keras.applications.mobilenet.preprocess_input(x[tf.newaxis, ...])
     data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
     headers = {"content-type": "application/json"}
     req.set_preprocessed()
@@ -41,13 +43,13 @@ def send_request(req, load_balancer_addr, evaluater_addr):
     predictions = json.loads(json_response.text)
 
     # Introduce artifical network overhead here
-    time.sleep(region_delay[req.region][server['region']] * len(data)/10*6)
-    req.set_served(keras.applications.densenet.decode_predictions(np.array(predictions['predictions']))[0][0][0])
+    time.sleep(region_delay[req.region][server['region']] * len(data)/10**6/2)
+    req.set_served(model_group.decode_predictions(np.array(predictions["predictions"]))[0][0][0])
+    # req.set_served(tf.keras.applications.mobilenet.decode_predictions(np.array(predictions["predictions"]))[0][0][0])
 
+    # Send result to evaluater
     data = pickle.dumps(req)
     requests.post(evaluater_addr, data=data)
-
-    return request
 
 
 def main():

@@ -2,17 +2,22 @@ import argparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import pickle
-import request
+
 
 class S(BaseHTTPRequestHandler):
     def do_POST(self):
         req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
-        
+
         # Make DRL decision with req
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(json.dumps({'region': 0, 'address': '222.111.222.238:8501', 'model': 'MobileNet'}).encode('utf8)'))
+        self.wfile.write(json.dumps({
+            'region': 0,
+            'address': '222.111.222.238:8501',
+            'model': 'MobileNet',
+            'model_group': 'mobilenet'
+        }).encode('utf8)'))
 
 
 def run(addr, port, server_class=HTTPServer, handler_class=S):
