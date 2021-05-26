@@ -4,9 +4,9 @@ import json
 import time
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    # load_balancer_address = '3.36.64.61', 59931
-    load_balancer_address = 'localhost', 8002
-    s.connect(load_balancer_address)
+    # server_address = '', 8001
+    server_address = 'localhost', 8002
+    s.connect(server_address)
 
     # Collect server state info
     server_state = {
@@ -17,7 +17,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     # Network stats using 'ifstat'
     p_ifstat = subprocess.Popen('ifstat', stdout=subprocess.PIPE)
-    p_tegrastats = subprocess.Popen('tegrastats', stdout=subprocess.PIPE)
+    # p_tegrastats = subprocess.Popen('tegrastats', stdout=subprocess.PIPE)
     # Consume headers
     p_ifstat.stdout.readline()
     p_ifstat.stdout.readline()
@@ -27,10 +27,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         time.sleep(1)
         ifstat = p_ifstat.stdout.readline().split()
         server_state['network'] = dict(zip(['in', 'out'], list(map(float, ifstat))))
-        tegrastats = p_tegrastats.stdout.readline().split()
-        server_state['RAM'] = tegrastats[1].decode()
-        server_state['CPU'] = tegrastats[9].decode()
-        server_state['GPU'] = tegrastats[13].decode()
+        #tegrastats = p_tegrastats.stdout.readline().split()
+        #server_state['RAM'] = tegrastats[1].decode()
+        #server_state['CPU'] = tegrastats[9].decode()
+        #server_state['GPU'] = tegrastats[13].decode()
         data = json.dumps(server_state).encode('utf-8')
+        
+        # Custom protocle: [4 bytes for data size] + [data]
         s.sendall(len(data).to_bytes(4, 'big'))
         s.sendall(data)

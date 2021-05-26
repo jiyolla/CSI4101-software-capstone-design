@@ -6,7 +6,7 @@ import random
 import concurrent.futures
 import requests
 import time
-import request # our own definition
+import request  # our own definition
 # import argparse
 
 # Introduce extra delay by (delay * request size in MB)secs
@@ -63,12 +63,12 @@ def main():
         load_balancer_addr = 'http://localhost:8000'
         evaluater_addr = 'http://localhost:8001'
         threads = []
-        for _ in range(num_req):
+        for i in range(num_req):
             region = random.randrange(3)
             image_id = f'ILSVRC2012_val_{str(random.randint(1, 100)).zfill(8)}'
             accuracy = random.uniform(0.5, 1)
             time = random.randint(1, 10)
-            req = request.Request(region, image_id, accuracy, time)
+            req = request.Request(i, region, image_id, accuracy, time)
             threads.append(executor.submit(send_request, req, load_balancer_addr, evaluater_addr))
 
 

@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 
 
 class Request:
-    def __init__(self, region, image_id, accuracy, time):
+    def __init__(self, unique_id, region, image_id, accuracy, time):
+        self.unique_id = unique_id
         self.region = region
         self.image_id = image_id
         self.image_path = f'data/image/{image_id}.JPEG'

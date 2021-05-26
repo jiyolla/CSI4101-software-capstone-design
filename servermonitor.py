@@ -1,10 +1,17 @@
-import socket
 import threading
 import socketserver
+import argparse
 import json
+import time
 
 
 server_states = {}
+
+
+def report_to_drl(pipe_to_drl):
+    while True:
+        time.sleep(0.5)
+        pipe_to_drl.send(server_states)
 
 
 def recvall(s, message_size):
@@ -18,7 +25,7 @@ def recvall(s, message_size):
     return b''.join(fragments)
 
 
-class ServerMonitorHandler(socketserver.BaseRequestHandler):
+class Handler(socketserver.BaseRequestHandler):
     # This part should be moved to load_balancer.py
 
     def handle(self):
@@ -32,22 +39,41 @@ class ServerMonitorHandler(socketserver.BaseRequestHandler):
             except TypeError:
                 reporting = False
                 break
-            print(server_state)
             with threading.Lock():
                 server_states[server_state['serving_address']] = server_state
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    pass
+    """Handle requests in a separate thread."""
 
 
-if __name__ == "__main__":
-    addr_server_monitor = ('', 8002)
+def run(addr, port, pipe_to_drl):
+    if pipe_to_drl is not None:
+        report_thread = threading.Thread(target=report_to_drl, args=(pipe_to_drl, ))
+        report_thread.start()
+    server_address = (addr, port)
+    server = ThreadedTCPServer(server_address, Handler)
+    print(f'Starting servermonitor server on {addr}:{port}')
+    server.serve_forever()
 
-    server_monitor_server = ThreadedTCPServer(addr_server_monitor, ServerMonitorHandler)
-    with server_monitor_server:
-        thread_server_monitor = threading.Thread(target=server_monitor_server.serve_forever)
-        thread_server_monitor.daemon = True
-        thread_server_monitor.start()
-        print("Server loop running in thread:", thread_server_monitor.name)
-        thread_server_monitor.join()
+
+def main(pipe_to_drl=None):
+    parser = argparse.ArgumentParser(description='Listen for server state report')
+    parser.add_argument(
+        '-l',
+        '--listen',
+        default='localhost',
+        help='Specify the IP address on which the server listens',
+    )
+    parser.add_argument(
+        '-p',
+        '--port',
+        type=int,
+        default=8002,
+        help='Specify the port on which the server listens',
+    )
+    args = parser.parse_args()
+    run(args.listen, args.port, pipe_to_drl)
+
+if __name__ == '__main__':
+    main()

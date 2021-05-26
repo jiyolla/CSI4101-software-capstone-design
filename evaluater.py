@@ -1,13 +1,25 @@
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+import threading
 import argparse
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import pandas as pd
 import pickle
-import request
+
 
 df = pd.read_csv('data/LOC_val_solution.csv')
 
 
-class S(BaseHTTPRequestHandler):
+results = []
+
+
+def report_to_drl(pipe_to_drl):
+    while True:
+        time.sleep(0.5)
+        pipe_to_drl.send(results)
+        with threading.Lock():
+            results = []
+
+
+class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
 
@@ -31,33 +43,38 @@ class S(BaseHTTPRequestHandler):
         print(f'Ground truth: {df[df["ImageId"] == req.image_id]["PredictionString"].to_string(index=False)}')
         print(f'Prediction: {req.response}')
         print(f'is_correct: {is_correct}\n')
+        
+        with threading.Lock():
+            results.append((is_correct, is_timely))
 
-        return is_timely, is_correct
-
-
-def run(addr, port, server_class=HTTPServer, handler_class=S):
+    
+def run(addr, port, pipe_to_drl):
+    if pipe_to_drl is not None:
+        report_thread = threading.Thread(target=report_to_drl, args=(pipe_to_drl, ))
+        report_thread.start()
     server_address = (addr, port)
-    httpd = server_class(server_address, handler_class)
+    server = ThreadingHTTPServer(server_address, Handler)
+    print(f'Starting evaluater server on {addr}:{port}')
+    server.serve_forever()
 
-    print(f"Starting httpd server on {addr}:{port}")
-    httpd.serve_forever()
 
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Run a simple HTTP server")
+def main(pipe_to_drl=None):
+    parser = argparse.ArgumentParser(description='Listen for response result')
     parser.add_argument(
-        "-l",
-        "--listen",
-        default="localhost",
-        help="Specify the IP address on which the server listens",
+        '-l',
+        '--listen',
+        default='localhost',
+        help='Specify the IP address on which the server listens',
     )
     parser.add_argument(
-        "-p",
-        "--port",
+        '-p',
+        '--port',
         type=int,
         default=8001,
-        help="Specify the port on which the server listens",
+        help='Specify the port on which the server listens',
     )
     args = parser.parse_args()
-    run(addr=args.listen, port=args.port)
+    run(args.listen, args.port, pipe_to_drl)
+
+if __name__ == '__main__':
+    main()
