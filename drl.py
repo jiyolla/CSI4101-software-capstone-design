@@ -4,6 +4,8 @@ import servermonitor
 import evaluater
 import time
 import threading
+import request
+from collections import deque
 
 
 class DRL:
@@ -13,6 +15,8 @@ class DRL:
         self.observation_interval = 0.1
         pass
     
+        self.request_queue = deque()
+        self.server_states = []
         self.pipe_to_loadbalancer = pipe_to_loadbalancer
         self.pipe_to_servermonitor = pipe_to_servermonitor
         self.pipe_to_evaluater = pipe_to_evaluater
@@ -36,15 +40,24 @@ class DRL:
         prev_action
         for _ in range(self.batch_size):
             time.sleep(self.observation_interval)
-            # If no request in queue
+            
+            # Read from servermonitor.py
+            if self.pipe_to_servermonitor.poll():
+                self.pipe_to_servermonitor.recv()
+            
+            # Read from loadbalancer.py
             if self.pipe_to_loadbalancer.poll():
-                req
+                self.request_queue.extend(self.pipe_to_loadbalancer.recv())
+            
+            # If no request is present
             # action fixed to do nothing
-            if not request_queue:
-                state = servermonitor.server_states + no request
+            if not self.request_queue:
+                req_state = request.Request.empty_state()
+                svr_state = 
                 action = nothing
             else:
-                state = servermonitor.server_states + request_queue.popleft()
+                req_state = self.request_queue.popleft().to_state()
+                svr_state = 
                 action = model.predict(state) + some randomness
                 
             # Get reward from evaluater

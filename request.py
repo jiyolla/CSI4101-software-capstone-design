@@ -17,6 +17,10 @@ class Request:
             'Preprocessed': None,
             'Served': None
         }
+        
+    @classmethod
+    def empty_state(cls):
+        return [0, 0, 0, 0]
 
     def to_state(self):
         return [self.region, self.image_size, self.expected_time.total_seconds(), self.expected_accuracy]
