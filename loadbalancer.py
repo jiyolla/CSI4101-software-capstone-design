@@ -5,28 +5,28 @@ import pickle
 import threading
 
 
-queries = []
-answers = {}
+class Communicator:
+    def __init__(self):
+        self.answers = {}
+
+    def set_pipe(self, pipe_to_drl):
+        self.pipe_to_drl = pipe_to_drl
+
+    def queries_to_drl(self, req):
+        self.pipe_to_drl.send(req)
+
+    def answer_from_drl(self, req_id):
+        while True:
+            if req_id in self.answers:
+                with threading.Lock():
+                    return self.answers.pop(req_id)
+            answer = self.pipe_to_drl.recv()
+            with threading.Lock():
+                self.answers[answer[0]] = answer[1]
 
 
-def queries_to_drl(pipe_to_drl):
-    while True:
-        if not queries:
-            time.sleep(0.1)
-            continue
-        pipe_to_drl.send(queries)
-        with threading.Lock():
-            queries = []
+c = Communicator()
 
-
-def answer_from_drl(req_id):
-    while True:
-        if req_id in answers:
-            return answers.pop(req_id)
-        answer = pipe_to_drl.recv()
-        answers[answer[0]] = answer[1]
-        
-    
 
 class Handler(BaseHTTPRequestHandler):
 
@@ -34,10 +34,10 @@ class Handler(BaseHTTPRequestHandler):
         req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
 
         # Make DRL decision with req
-        with threading.Lock():
-            queries.append(req)
-        server = answer_from_drl(req.unique_id)
-        
+        global c
+        c.queries_to_drl(req)
+        server = c.answer_from_drl(req.unique_id)
+
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
@@ -50,9 +50,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run(addr, port, pipe_to_drl):
-    if pipe_to_drl is not None:
-        report_thread = threading.Thread(target=report_to_drl, args=(pipe_to_drl, ))
-        report_thread.start()
+    c.set_pipe(pipe_to_drl)
     server_address = (addr, port)
     server = ThreadingHTTPServer(server_address, Handler)
     print(f'Starting loadbalancer server on {addr}:{port}')
@@ -76,6 +74,7 @@ def main(pipe_to_drl=None):
     )
     args = parser.parse_args()
     run(args.listen, args.port, pipe_to_drl)
+
 
 if __name__ == '__main__':
     main()

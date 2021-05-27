@@ -1,5 +1,4 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-import threading
 import argparse
 import pandas as pd
 import pickle
@@ -8,17 +7,18 @@ import pickle
 df = pd.read_csv('data/LOC_val_solution.csv')
 
 
-results = []
+class Communicator:
+    def __init__(self):
+        self.answers = {}
+
+    def set_pipe(self, pipe_to_drl):
+        self.pipe_to_drl = pipe_to_drl
+
+    def report_to_drl(self, result):
+        self.pipe_to_drl.send(result)
 
 
-def report_to_drl(pipe_to_drl):
-    while True:
-        if not results:
-            time.sleep(0.1)
-            continue
-        pipe_to_drl.send(results)
-        with threading.Lock():
-            results = []
+c = Communicator()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -45,15 +45,13 @@ class Handler(BaseHTTPRequestHandler):
         print(f'Ground truth: {df[df["ImageId"] == req.image_id]["PredictionString"].to_string(index=False)}')
         print(f'Prediction: {req.response}')
         print(f'is_correct: {is_correct}\n')
-        
-        with threading.Lock():
-            results.append((is_timely, is_correct))
 
-    
+        global c
+        c.report_to_drl((is_timely, is_correct))
+
+
 def run(addr, port, pipe_to_drl):
-    if pipe_to_drl is not None:
-        report_thread = threading.Thread(target=report_to_drl, args=(pipe_to_drl, ))
-        report_thread.start()
+    c.set_pipe(pipe_to_drl)
     server_address = (addr, port)
     server = ThreadingHTTPServer(server_address, Handler)
     print(f'Starting evaluater server on {addr}:{port}')
@@ -77,6 +75,7 @@ def main(pipe_to_drl=None):
     )
     args = parser.parse_args()
     run(args.listen, args.port, pipe_to_drl)
+
 
 if __name__ == '__main__':
     main()

@@ -17,7 +17,7 @@ class Request:
             'Preprocessed': None,
             'Served': None
         }
-        
+
     @classmethod
     def empty_state(cls):
         return [0, 0, 0, 0]

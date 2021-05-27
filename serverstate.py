@@ -1,16 +1,20 @@
 class ServerState:
-    def __init__(self, region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage):
+    def __init__(self, server_id, region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage):
+        self.server_id = server_id
         self.region = region
         self.name = name
         self.ip = ip
         self.port = port
         self.address = f'{ip}:{port}'
-        self.models = models'available_models': 'should be scanned automatically',
-        
-        
+        self.models = models
+        self.available_cpu = available_cpu
+        self.available_gpu = available_gpu
+        self.available_mem = available_mem
+        self.network_usage = network_usage
+
     @classmethod
     def empty_state(cls):
-        return [0, 0, 0, 0]
+        return [0, 0, 0, 0, 0]
 
     def to_state(self):
-        return [self.region, self.image_size, self.expected_time.total_seconds(), self.expected_accuracy]
+        return [self.region, self.available_cpu, self.available_gpu, self.available_mem, self, network_usage]

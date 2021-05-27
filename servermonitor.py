@@ -1,8 +1,11 @@
 import threading
 import socketserver
 import argparse
-import json
 import time
+import pickle
+
+# Cannot drop outdated server yet
+# DRL also doesn't support change in #servers, #models
 
 
 server_states = {}
@@ -35,12 +38,12 @@ class Handler(socketserver.BaseRequestHandler):
         while reporting:
             try:
                 message_size = int.from_bytes(recvall(self.request, 4), 'big')
-                server_state = json.loads(recvall(self.request, message_size))
+                server_state = pickle.loads(recvall(self.request, message_size))
             except TypeError:
                 reporting = False
                 break
             with threading.Lock():
-                server_states[server_state['serving_address']] = server_state
+                server_states[server_state.server_id] = server_state
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -74,6 +77,7 @@ def main(pipe_to_drl=None):
     )
     args = parser.parse_args()
     run(args.listen, args.port, pipe_to_drl)
+
 
 if __name__ == '__main__':
     main()
