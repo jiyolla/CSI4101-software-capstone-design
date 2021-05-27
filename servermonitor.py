@@ -9,13 +9,13 @@ import pickle
 
 
 server_states = {}
-num_server = 3
+num_servers = 2
 
 
 def report_to_drl(pipe_to_drl):
     while True:
         time.sleep(0.1)
-        if len(server_states) == num_server:
+        if len(server_states) == num_servers:
             pipe_to_drl.send(server_states)
 
 

@@ -25,11 +25,13 @@ class DRL:
         self.explore_chance_decay = 0.995
         self.discount_factor = 0.99
 
+        self.num_servers = 2
+        self.num_models_per_server = 9
         self.request_queue = deque()
         self.memory = []
         self.server_states = {}
-        self.action_space = 9 * 3 + 1
-        self.state_space = 4 + 5 * 3
+        self.action_space = self.num_models_per_server * self.num_servers + 1
+        self.state_space = 4 + 5 * self.num_servers
         self.pipe_to_loadbalancer = pipe_to_loadbalancer
         self.pipe_to_servermonitor = pipe_to_servermonitor
         self.pipe_to_evaluater = pipe_to_evaluater
