@@ -17,4 +17,4 @@ class ServerState:
         return [0, 0, 0, 0, 0]
 
     def to_state(self):
-        return [self.region, self.available_cpu, self.available_gpu, self.available_mem, self, network_usage]
+        return [self.region, self.available_cpu, self.available_gpu, self.available_mem, self.network_usage]

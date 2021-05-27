@@ -5,7 +5,6 @@ import serverstate
 import argparse
 import pickle
 
-
 def run(load, configure):
     """
     if load:
@@ -14,29 +13,40 @@ def run(load, configure):
                 server_state = pickle.load(f)
         except OSError:
             print('Failed to load config file')
-    if configure:
     """
+
+    # Collect server state info
+    server_id = 0
+    region = 0
+    name = 'jetson_nano_1'
+    ip = '222.111.222.238'
+    port = '8501'
+    models = ''
+    available_cpu = 50
+    available_gpu = 0
+    available_mem = 1000
+    network_usage = 0
+    
+    if configure:
+        server_id = input('server_id: ')
+        name = input('name: ')
+        
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # Hardcoded
         server_address = 'localhost', 8002
-        s.connect(server_address)
-
-        # Collect server state info
-        server_id = 0
-        region = 0
-        name = 'jetson_nano_1'
-        ip = '222.111.222.238'
-        port = '8501'
-        models = ''
-        available_cpu = None
-        available_gpu = None
-        available_mem = None
-        network_usage = None
-        # server_state = serverstate.ServerState(region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage)
+        connected = False
+        while not connected:
+            try:
+                time.sleep(5)
+                s.connect(server_address)
+                connected = True
+            except ConnectionRefusedError:
+                print('Connecttion Refused. Retry after 5 secs.')
+                connected = False
 
         # Network stats using 'ifstat'
-        p_ifstat = subprocess.Popen('ifstat', stdout=subprocess.PIPE)
+        p_ifstat = subprocess.Popen(['ifstat', '-n'], stdout=subprocess.PIPE)
         # p_tegrastats = subprocess.Popen('tegrastats', stdout=subprocess.PIPE)
         # Consume headers
         p_ifstat.stdout.readline()

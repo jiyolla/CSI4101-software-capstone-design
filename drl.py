@@ -19,7 +19,6 @@ class DRL:
         self.observation_interval = 0.1
 
         self.request_queue = deque()
-        self.number_server = 3
         self.server_states = {}
         self.pipe_to_loadbalancer = pipe_to_loadbalancer
         self.pipe_to_servermonitor = pipe_to_servermonitor
@@ -34,10 +33,10 @@ class DRL:
             reward = -20
         return reward
 
-    def run_and_train():
+    def run_and_train(self):
         while True:
-            prev_state = 
-            prev_action = 
+            prev_state = serverstate.ServerState.empty_state()
+            prev_action = None
             for _ in range(self.batch_size):
                 time.sleep(self.observation_interval)
 
@@ -55,19 +54,22 @@ class DRL:
                     req_state = request.Request.empty_state()
                 else:
                     req_state = self.request_queue.popleft().to_state()
-                svr_state = self.server_states.to_state()
-                action = model.predict(state) + some randomness
+                svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
+                state = req_state + svr_state
+                # print(state)
+                # action = model.predict(state) + some randomness
 
                 # Get reward from evaluater
                 reward = 0
-                if pipe_to_evaluater.poll():
+                if self.pipe_to_evaluater.poll():
                     reward = reward_function(self.pipe_to_evaluater.recv())
+                # print(reward)
 
-                memory.append(prev_state, prev_action, state, reward)
-                prev_state = state
-                prev_acton = action
-            start a thread to batch training a new model
-            replace current model with new model upon completion
+                # memory.append(prev_state, prev_action, state, reward)
+                #prev_state = state
+                #prev_acton = action
+            # start a thread to batch training a new model
+            # replace current model with new model upon completion
 
 
 def main():
@@ -81,9 +83,9 @@ def main():
     p_loadbalancer.start()
     p_servermonitor.start()
     p_evaluater.start()
-    
-    
+
     drl = DRL(pipe_to_loadbalancer, pipe_to_servermonitor, pipe_to_evaluater)
+    drl.run_and_train()
 
 
 if __name__ == '__main__':

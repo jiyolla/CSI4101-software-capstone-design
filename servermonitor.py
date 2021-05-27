@@ -9,12 +9,14 @@ import pickle
 
 
 server_states = {}
+num_server = 3
 
 
 def report_to_drl(pipe_to_drl):
     while True:
         time.sleep(0.1)
-        pipe_to_drl.send(server_states)
+        if len(server_states) == num_server:
+            pipe_to_drl.send(server_states)
 
 
 def recvall(s, message_size):
