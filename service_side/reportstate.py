@@ -31,7 +31,9 @@ def run(load, configure, tegrastats_flag):
 
     if configure:
         server_id = input('server_id: ')
+        region = input('region: ')
         name = input('name: ')
+
 
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
