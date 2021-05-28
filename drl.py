@@ -26,7 +26,7 @@ class DRL:
         self.discount_factor = 0.99
 
         self.num_servers = 2
-        self.num_models_per_server = 9
+        self.num_models_per_server = 8
         self.request_queue = deque()
         self.memory = []
         self.server_states = servermonitor.empty_states()
