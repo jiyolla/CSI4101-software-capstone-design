@@ -4,7 +4,7 @@ import pandas as pd
 import pickle
 
 
-df = pd.read_csv('data/LOC_val_solution.csv')
+df = pd.read_csv('../data/LOC_val_solution.csv')
 
 
 class Communicator:
