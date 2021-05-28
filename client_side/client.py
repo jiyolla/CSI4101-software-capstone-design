@@ -3,6 +3,8 @@ import pickle
 import random
 import concurrent.futures
 import time
+from datetime import datetime
+import argparse
 import sys
 import os
 sys.path.append(os.path.join(sys.path[0], '..'))
@@ -14,14 +16,12 @@ import requests
 from common import request
 
 
-# import argparse
-
 # Introduce extra delay by (delay * request size in MB)secs
 # Larger value indicate worser connection
 region_delay = {
     0: {0: 0, 1: 0.5, 2: 1},
     1: {0: 0.5, 1: 0, 2: 0.75},
-    2: {0: 1, 1: 0.75, 2: 0}
+    2: {0: 1, 1: 0.75, 2: 0},
 }
 
 
@@ -41,7 +41,6 @@ def send_request(req, load_balancer_addr, evaluater_addr):
     img = tf.keras.preprocessing.image.load_img(req.image_path, target_size=[h, w])
     x = tf.keras.preprocessing.image.img_to_array(img)
     x = model_group.preprocess_input(x[tf.newaxis, ...])
-    # x = tf.keras.applications.mobilenet.preprocess_input(x[tf.newaxis, ...])
     data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
     headers = {"content-type": "application/json"}
     req.set_preprocessed()
@@ -52,31 +51,39 @@ def send_request(req, load_balancer_addr, evaluater_addr):
     # Introduce artifical network overhead here
     time.sleep(region_delay[req.region][server['region']] * len(data)/10**6/2)
     req.set_served(model_group.decode_predictions(np.array(predictions["predictions"]))[0][0][0])
-    # req.set_served(tf.keras.applications.mobilenet.decode_predictions(np.array(predictions["predictions"]))[0][0][0])
 
     # Send result to evaluater
     data = pickle.dumps(req)
     requests.post(evaluater_addr, data=data)
 
 
-def main():
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-t', '--test', help='Perform local test', action='store_true')
-    # args = parser.parse_args()
-
-    num_req = 3
-
+def uniform_request(load_balancer_addr, evaluater_addr, num_req, interval=0.25):
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_req) as executor:
-        load_balancer_addr = 'http://localhost:8000'
-        evaluater_addr = 'http://localhost:8001'
-        threads = []
         for i in range(num_req):
-            region = random.randrange(3)
+            time.sleep(interval)
+            region = random.randrange(len(region_delay))
             image_id = f'ILSVRC2012_val_{str(random.randint(1, 100)).zfill(8)}'
-            accuracy = random.uniform(0.5, 1)
-            time = random.randint(1, 10)
-            req = request.Request(i, region, image_id, accuracy, time)
-            threads.append(executor.submit(send_request, req, load_balancer_addr, evaluater_addr))
+            expected_accuracy = random.uniform(0.5, 1)
+            expected_time = random.uniform(1, 10)
+            req = request.Request(i, region, image_id, expected_accuracy, expected_time)
+            executor.submit(send_request, req, load_balancer_addr, evaluater_addr)
+    
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--configure', help='Configure through interactive interface', action='store_true')
+    args = parser.parse_args()
+
+    load_balancer_addr = 'http://localhost:8000'
+    evaluater_addr = 'http://localhost:8001'
+    num_req = 3
+    req_func = uniform_request
+    if args.configure:
+        load_balancer_addr = f'http://{input("Load balancer ip address: ")}:{input("Load balancer port: ")}'
+        evaluater_addr = f'http://{input("Evaluater ip address: ")}:{input("Evaluater port: ")}'
+        num_req = int(input('Number of requests: '))
+        # req_func = eval(input('Request function: '))
+    req_func(load_balancer_addr, evaluater_addr, num_req)
 
 
 if __name__ == "__main__":
