@@ -3,7 +3,9 @@ import socketserver
 import argparse
 import time
 import pickle
-import serverstate
+import sys
+sys.path.append("..")
+from common import serverstate
 
 # Cannot drop outdated server yet
 # DRL also doesn't support change in #servers, #models

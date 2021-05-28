@@ -6,8 +6,10 @@ import servermonitor
 import evaluater
 import time
 import threading
-import serverstate
-import request
+import sys
+sys.path.append("..")
+from common import serverstate
+from common import request
 from collections import deque
 import random
 

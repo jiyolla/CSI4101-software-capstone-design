@@ -6,7 +6,9 @@ import random
 import concurrent.futures
 import requests
 import time
-import request  # our own definition
+import sys
+sys.path.append("..")
+from common import request
 # import argparse
 
 # Introduce extra delay by (delay * request size in MB)secs

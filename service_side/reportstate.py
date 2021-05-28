@@ -1,7 +1,9 @@
 import subprocess
 import socket
 import time
-import serverstate
+import sys
+sys.path.append("..")
+from common import serverstate
 import argparse
 import pickle
 
