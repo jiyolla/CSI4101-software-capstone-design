@@ -63,7 +63,7 @@ class DRL:
         X = []
         Y = []
         for state, action, next_state, reward in batch:
-            reward = reward + self.discount_factor * np.amax(self.model.predict(next_state)[0])
+            reward = reward + self.discount_factor * np.amax(model.predict(next_state)[0])
             target = self.model.predict(state)[0]
             target[action] = reward
             X.append(state)
