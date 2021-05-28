@@ -3,6 +3,7 @@ import socketserver
 import argparse
 import time
 import pickle
+import serverstate
 
 # Cannot drop outdated server yet
 # DRL also doesn't support change in #servers, #models
@@ -11,6 +12,12 @@ import pickle
 server_states = {}
 num_servers = 2
 
+def empty_states():
+    states = {}
+    for i in range(num_servers):
+        state = serverstate.ServerState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        states[i] = state
+    return states
 
 def report_to_drl(pipe_to_drl):
     while True:

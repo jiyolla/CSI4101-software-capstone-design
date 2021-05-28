@@ -29,7 +29,7 @@ class DRL:
         self.num_models_per_server = 9
         self.request_queue = deque()
         self.memory = []
-        self.server_states = {}
+        self.server_states = servermonitor.empty_states()
         self.action_space = self.num_models_per_server * self.num_servers + 1
         self.state_space = 4 + 5 * self.num_servers
         self.pipe_to_loadbalancer = pipe_to_loadbalancer
@@ -41,7 +41,7 @@ class DRL:
         model.add(tf.keras.layers.Dense(units=64, activation='relu', input_dim=self.state_space))
         model.add(tf.keras.layers.Dense(units=32, activation='relu'))
         model.add(tf.keras.layers.Dense(units=self.state_space, activation='linear'))
-        model.compile(loss=tf.keras.losses.Huber, optimizer=tf.keras.optimizers.Adam)
+        model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam())
         return model
 
     def reward_function(result):
@@ -97,12 +97,13 @@ class DRL:
                 else:
                     req_state = self.request_queue.popleft().to_state()
                 svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
-                state = np.array(req_state + svr_state)
+                state = np.array([req_state + svr_state])
+                print(state)
 
                 if random.random() < self.explore_chance:
                     action = random.randrange(self.action_space)
                 else:
-                    action = model.predict(state)
+                    action = np.amax(model.predict(state)[0])
                 self.explore_chance *= self.explore_chance_decay
 
                 # Get reward from evaluater
@@ -112,7 +113,7 @@ class DRL:
                 # print(reward)
 
                 with threading.Lock():
-                    self.memory.append(prev_state, prev_action, state, reward)
+                    self.memory.append((prev_state, prev_action, state, reward))
                 prev_state = state
                 prev_action = action
 
