@@ -4,8 +4,11 @@ import argparse
 import time
 import pickle
 import sys
-sys.path.append("..")
+import os
+sys.path.append(os.path.join(sys.path[0], '..'))
+
 from common import serverstate
+
 
 # Cannot drop outdated server yet
 # DRL also doesn't support change in #servers, #models

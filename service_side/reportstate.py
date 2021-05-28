@@ -1,11 +1,14 @@
 import subprocess
 import socket
 import time
-import sys
-sys.path.append("..")
-from common import serverstate
 import argparse
 import pickle
+import sys
+import os
+sys.path.append(os.path.join(sys.path[0], '..'))
+
+from common import serverstate
+
 
 def run(load, configure, tegrastats_flag):
     """

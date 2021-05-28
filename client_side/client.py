@@ -1,14 +1,19 @@
-import tensorflow as tf
-import numpy as np
 import json
 import pickle
 import random
 import concurrent.futures
-import requests
 import time
 import sys
-sys.path.append("..")
+import os
+sys.path.append(os.path.join(sys.path[0], '..'))
+
+import tensorflow as tf
+import numpy as np
+import requests
+
 from common import request
+
+
 # import argparse
 
 # Introduce extra delay by (delay * request size in MB)secs

@@ -1,18 +1,19 @@
+from multiprocessing import Process, Pipe, Queue
+from collections import deque
+import time
+import threading
+import random
+import sys
+import os
+sys.path.append(os.path.join(sys.path[0], '..'))
+
 import tensorflow as tf
 import numpy as np
-from multiprocessing import Process, Pipe, Queue
+
+from common import serverstate, request
 import loadbalancer
 import servermonitor
 import evaluater
-import time
-import threading
-import sys
-sys.path.append("..")
-from common import serverstate
-from common import request
-from collections import deque
-import random
-
 
 # Currently cannot adatp to change in #server/#model
 

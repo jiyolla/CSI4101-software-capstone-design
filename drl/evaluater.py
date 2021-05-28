@@ -1,7 +1,8 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import argparse
-import pandas as pd
 import pickle
+
+import pandas as pd
 
 
 df = pd.read_csv('../data/LOC_val_solution.csv')
