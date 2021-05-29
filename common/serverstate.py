@@ -12,6 +12,9 @@ class ServerState:
         self.available_mem = available_mem
         self.network_usage = network_usage
 
+    def __repr__(self):
+        return f'{self.server_id}, {self.region}, {self.name}, {self.ip}, {self.port}, {self.models}, {self.available_cpu}'
+
     @classmethod
     def empty_state(cls):
         return [0, 0, 0, 0, 0]

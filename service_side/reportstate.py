@@ -6,7 +6,7 @@ import pickle
 import sys
 import os
 
-import export_keras_pretrained
+import deploy_models
 sys.path.append(os.path.join(sys.path[0], '..'))
 from common import serverstate
 
@@ -27,7 +27,7 @@ def run(load, configure, tegrastats_flag):
     name = 'jetson_nano_1'
     ip = '222.111.222.238'
     port = '8501'
-    models = export_keras_pretrained.models
+    models = deploy_models.models
     available_cpu = 0
     available_gpu = 0
     available_mem = 0
