@@ -16,7 +16,7 @@ def main():
             print(f'{model} loaded.')
             f.write('    config {')
             f.write(f'        name: {model}')
-            f.write(f'        base_path: "/models/{model}/"')
+            f.write(f'        base_path: "/service/models/{model}/"')
             f.write('model_platform: "tensorflow"')
             f.write('    }')
         f.write('}')
