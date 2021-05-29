@@ -9,9 +9,11 @@
 
 
 ### Things To Do
-1. Implement DRL and tune it.
+1. Solve drl predict hang issue
+2. Action mapping dqn to service model + server(json)
+3. Evaluate load balancer performance and compare with random load balancer
 
-2. Automate deployment.
+4. Automate deployment.
     1. Include dockerfile of the service server. Also probably include some bash command for multiple docker each serving a single model.
     2. Scripts to install prerequisite.
 

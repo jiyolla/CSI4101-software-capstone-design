@@ -56,10 +56,9 @@ class DRL:
             reward = -20
         return reward
 
-    def batch_train(self, model, ret):
-        new_model = tf.keras.models.clone_model(model)
-        new_model.set_weights(model.get_weights())
-        model = new_model
+    def batch_train(self, weights, ret):
+        model = self.build_model()
+        model.set_weights(weights)
         batch = self.memory[:self.batch_size]
         with threading.Lock():
             self.memory = self.memory[self.batch_size:]
@@ -137,7 +136,7 @@ class DRL:
                 print('waiting for join')
                 p_train.join()
             print('calling batch_train...')
-            p_train = Process(target=self.batch_train, args=(model, ret))
+            p_train = Process(target=self.batch_train, args=(model.get_weights(), ret))
             p_train.start()
 
 
