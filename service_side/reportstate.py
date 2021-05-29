@@ -5,8 +5,9 @@ import argparse
 import pickle
 import sys
 import os
-sys.path.append(os.path.join(sys.path[0], '..'))
 
+import export_keras_pretrained
+sys.path.append(os.path.join(sys.path[0], '..'))
 from common import serverstate
 
 
@@ -26,22 +27,26 @@ def run(load, configure, tegrastats_flag):
     name = 'jetson_nano_1'
     ip = '222.111.222.238'
     port = '8501'
-    models = ''
-    available_cpu = 50
+    models = export_keras_pretrained.models
+    available_cpu = 0
     available_gpu = 0
-    available_mem = 1000
+    available_mem = 0
     network_usage = 0
+    server_address = 'localhost', 8002
+    interval = 1
 
     if configure:
-        server_id = input('server_id: ')
-        region = input('region: ')
+        server_address = input('servermonitor ip: '), int(input('servermonitor port: '))
+        server_id = int(input('server_id: '))
+        region = int(input('region: '))
         name = input('name: ')
+        ip = input('ip: ')
+        port = input('port: ')
 
-
+    server_state = serverstate.ServerState(server_id, region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # Hardcoded
-        server_address = 'localhost', 8002
         connected = False
         while not connected:
             try:
@@ -52,7 +57,6 @@ def run(load, configure, tegrastats_flag):
                 print('Connecttion Refused. Retry after 5 secs.')
                 connected = False
 
-
         # Network stats using 'ifstat'
         p_ifstat = subprocess.Popen(['ifstat', '-n'], stdout=subprocess.PIPE)
         if tegrastats_flag:
@@ -62,7 +66,7 @@ def run(load, configure, tegrastats_flag):
         p_ifstat.stdout.readline()
         # Read contents
         while(True):
-            time.sleep(1)
+            time.sleep(interval)
             ifstat = p_ifstat.stdout.readline().split()
             # server_state['network'] = dict(zip(['in', 'out'], list(map(float, ifstat))))
             network_usage = sum(list(map(float, ifstat)))
@@ -75,7 +79,10 @@ def run(load, configure, tegrastats_flag):
                 cpus = tegrastats[9].decode().strip('[]').split(',')
                 available_cpu = sum([int(cpu.split('%')[0]) for cpu in cpus])/len(cpus)
                 available_gpu = int(tegrastats[13].decode().split('%')[0])
-            server_state = serverstate.ServerState(server_id, region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage)
+            server_state.available_cpu = available_cpu
+            server_state.available_gpu = available_gpu
+            server_state.available_mem = available_mem
+            server_state.network_usage = network_usage
             data = pickle.dumps(server_state)
 
             # Custom protocle: [4 bytes for data size] + [data]

@@ -41,12 +41,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
+        self.wfile.write(server)
+        """
         self.wfile.write(json.dumps({
             'region': 0,
             'address': '222.111.222.238:8501',
-            'model': 'MobileNet',
-            'model_group': 'mobilenet'
-        }).encode('utf8)'))
+            'model': 'MobileNet'
+        }).encode('utf8)')
+        """
 
 
 def run(addr, port, pipe_to_drl):

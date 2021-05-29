@@ -36,7 +36,7 @@ def send_request(req, load_balancer_addr, evaluater_addr):
     # Pre-processing. This should be moved to server side.
     # Preprocessed data is about 30x larger.
     model = eval(f'tf.keras.applications.{server["model"]}')
-    model_group = eval(f'tf.keras.applications.{server["model_group"]}')
+    model_group = eval(f'tf.keras.applications.{model._keras_api_names[0].split(".")[2]}')
     h, w = map(int, model.__doc__.split('input_shape: ')[1].split('`(')[1].split(',')[:2])
     img = tf.keras.preprocessing.image.load_img(req.image_path, target_size=[h, w])
     x = tf.keras.preprocessing.image.img_to_array(img)

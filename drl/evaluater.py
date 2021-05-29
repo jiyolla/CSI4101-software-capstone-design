@@ -1,11 +1,13 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import argparse
 import pickle
+import sys
+import os
 
 import pandas as pd
 
 
-df = pd.read_csv('../data/LOC_val_solution.csv')
+df = pd.read_csv(os.path.join(sys.path[0], '../data/LOC_val_solution.csv'))
 
 
 class Communicator:

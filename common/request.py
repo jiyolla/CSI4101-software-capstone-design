@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+import os
+import sys
 import imagesize
 
 
@@ -7,7 +9,7 @@ class Request:
         self.unique_id = unique_id
         self.region = region
         self.image_id = image_id
-        self.image_path = f'data/image/{image_id}.JPEG'
+        self.image_path = os.path.join(sys.path[0], f'../data/image/{image_id}.JPEG')
         self.expected_accuracy = accuracy
         self.expected_time = timedelta(seconds=time)
         self.image_size = imagesize.get(self.image_path)
