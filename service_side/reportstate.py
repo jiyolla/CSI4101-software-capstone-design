@@ -6,9 +6,9 @@ import pickle
 import sys
 import os
 
-import deploy_models
 sys.path.append(os.path.join(sys.path[0], '..'))
 from common import serverstate
+from common import available_models
 
 
 def run(load, configure, tegrastats_flag):
@@ -27,7 +27,7 @@ def run(load, configure, tegrastats_flag):
     name = 'jetson_nano_1'
     ip = '222.111.222.238'
     port = '8501'
-    models = deploy_models.models
+    models = available_models.lst
     available_cpu = 0
     available_gpu = 0
     available_mem = 0

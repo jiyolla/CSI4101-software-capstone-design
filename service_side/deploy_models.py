@@ -1,12 +1,19 @@
-models = ['Xception', 'InceptionV3', 'MobileNetV2', 'DenseNet121', 'DenseNet169', 'EfficientNetB0']
+import sys
+import os
+import tensorflow as tf
+
+sys.path.append(os.path.join(sys.path[0], '..'))
+from common import available_models
 
 
 def main():
-    export = __import__('export_keras_pretrained')
     with open('models.config', 'w') as f:
         f.write('model_config_list {')
-        for model in models:
-            export.main(model)
+        for model in available_models.lst:
+            print(f'Loading {model}...')
+            loaded_model = eval(f'tf.keras.applications.{model}')
+            tf.saved_model.save(loaded_model(), f'./models/{model}/1')
+            print(f'{model} loaded.')
             f.write('    config {')
             f.write(f'        name: {model}')
             f.write(f'        base_path: "/models/{model}/"')

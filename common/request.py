@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import os
 import sys
 import imagesize
+import numpy as np
 
 
 class Request:
@@ -12,7 +13,7 @@ class Request:
         self.image_path = os.path.join(sys.path[0], f'../data/image/{image_id}.JPEG')
         self.expected_accuracy = accuracy
         self.expected_time = timedelta(seconds=time)
-        self.image_size = imagesize.get(self.image_path)
+        self.image_size = np.prod(imagesize.get(self.image_path))
         self.timestamps = {
             'Created': datetime.now(),
             'Allocated': None,

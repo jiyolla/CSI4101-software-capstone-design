@@ -10,7 +10,7 @@ sys.path.append(os.path.join(sys.path[0], '..'))
 import tensorflow as tf
 import numpy as np
 
-from common import serverstate, request
+from common import serverstate, request, available_models
 import loadbalancer
 import servermonitor
 import evaluater
@@ -26,10 +26,10 @@ class DRL:
         self.explore_chance = 0.7
         self.final_explore_chance = 0.01
         self.explore_chance_decay = 0.995
-        self.discount_factor = 0.99
+        self.discount_factor = 0.999
 
-        self.num_servers = 2
-        self.num_models_per_server = 8
+        self.num_servers = servermonitor.num_servers
+        self.num_models_per_server = len(available_models.lst)
         self.request_queue = deque()
         self.memory = []
         self.server_states = servermonitor.empty_states()
@@ -57,6 +57,9 @@ class DRL:
         return reward
 
     def batch_train(self, model, ret):
+        new_model = tf.keras.models.clone_model(model)
+        new_model.set_weights(model.get_weights())
+        model = new_model
         batch = self.memory[:self.batch_size]
         with threading.Lock():
             self.memory = self.memory[self.batch_size:]
@@ -64,25 +67,32 @@ class DRL:
         X = []
         Y = []
         for state, action, next_state, reward in batch:
-            reward = reward + self.discount_factor * np.amax(model.predict(next_state)[0])
-            target = self.model.predict(state)[0]
+            print(state, action, next_state, reward)
+            print(model)
+            print(model.predict(next_state)[0])
+            print('2')
+            reward = reward + self.discount_factor * np.amax([0])
+            
+            target = model.predict(state)[0]
+            print('3')
             target[action] = reward
             X.append(state)
             Y.append(target)
         X = np.array(X)
         Y = np.array(Y)
-        model.fit(X, Y, epochs=1, verbose=0)
+        model.fit(X, Y, epochs=1)# , verbose=0)
+        print('finish training...')
         ret.put(model)
 
     def run_and_train(self):
         model = self.build_model()
-        new_model = None
+        print(model)
         p_train = None
         ret = Queue()
-        while True:
-            prev_state = serverstate.ServerState.empty_state()
+        for e in range(1000):
+            prev_state = np.array([0]*self.state_space)
             prev_action = 0
-            for _ in range(self.batch_size):
+            for t in range(self.batch_size):
                 time.sleep(self.observation_interval)
 
                 # Read from servermonitor.py
@@ -101,7 +111,7 @@ class DRL:
                     req_state = self.request_queue.popleft().to_state()
                 svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
                 state = np.array([req_state + svr_state])
-                print(state)
+                print(f'{e}-{t}: {state}')
 
                 if random.random() < self.explore_chance:
                     action = random.randrange(self.action_space)
@@ -124,9 +134,10 @@ class DRL:
             # replace current model with new model upon completion
             if p_train is not None:
                 model = ret.get()
+                print('waiting for join')
                 p_train.join()
-            new_model = model
-            p_train = Process(target=self.batch_train, args=(new_model, ret))
+            print('calling batch_train...')
+            p_train = Process(target=self.batch_train, args=(model, ret))
             p_train.start()
 
 
