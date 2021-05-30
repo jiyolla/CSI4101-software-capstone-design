@@ -29,6 +29,7 @@ def send_request(req, load_balancer_addr, evaluater_addr):
     try:
         # 1. Send request meta-data to load balancer to get serving server address
         data = pickle.dumps(req)
+        print(load_balancer_addr)
         res = requests.post(load_balancer_addr, data=data)
         server = json.loads(res.text)
         req.set_allocated(server)
@@ -78,6 +79,7 @@ def uniform_request(load_balancer_addr, evaluater_addr, num_req_per_min):
             expected_time = random.uniform(1, 10)
             req = request.Request(req_id, region, image_id, expected_accuracy, expected_time)
             executor.submit(send_request, req, load_balancer_addr, evaluater_addr)
+            end_of_last_request = time.perf_counter_ns()
 
 
 def main():

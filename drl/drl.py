@@ -141,11 +141,11 @@ class DRL:
                     if self.pipe_to_evaluater.poll():
                         reward = self.reward_function(self.pipe_to_evaluater.recv())
                         print(reward)
-                    
 
                     memory.append((prev_state, prev_action, state, reward))
                     prev_state = state
                     prev_action = action
+                    end_of_last_observation = time.perf_counter_ns()
 
                 # start a thread to batch training a new model
                 # replace current model with new model upon completion
