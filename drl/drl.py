@@ -124,7 +124,7 @@ class DRL:
                         req_state = self.request_queue.popleft().to_state()
                     svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
                     state = np.array([req_state + svr_state])
-                    print(f'{e}-{t}: {state}')
+                    # print(f'{e}-{t}: {state}')
 
                     if no_request:
                         action = 0
@@ -140,7 +140,8 @@ class DRL:
                     reward = 0
                     if self.pipe_to_evaluater.poll():
                         reward = self.reward_function(self.pipe_to_evaluater.recv())
-                    # print(reward)
+                        print(reward)
+                    
 
                     memory.append((prev_state, prev_action, state, reward))
                     prev_state = state
@@ -169,7 +170,7 @@ class DRL:
                 X = []
                 Y = []
                 for state, action, next_state, reward in memory:
-                    print(state, action, next_state, reward)
+                    # print(state, action, next_state, reward)
                     reward = reward + self.discount_factor * np.amax(model.predict(next_state)[0])
                     target = model.predict(state)[0]
                     target[action] = reward
@@ -177,9 +178,9 @@ class DRL:
                     Y.append(target)
                 X = np.array(X)
                 Y = np.array(Y)
-                print('start training...')
+                # print('start training...')
                 model.fit(X, Y, epochs=1)# , verbose=0)
-                print('finish training...')
+                # print('finish training...')
                 pipe_to_serve.send(model.get_weights())
         except Exception as err:
             traceback.print_tb(err.__traceback__)
