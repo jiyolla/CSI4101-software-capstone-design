@@ -3,6 +3,7 @@ from collections import deque
 import time
 import random
 import traceback
+import json
 import sys
 import os
 sys.path.append(os.path.join(sys.path[0], '..'))
@@ -31,7 +32,7 @@ class DRL:
         self.num_servers = servermonitor.num_servers
         self.num_models_per_server = len(available_models.lst)
         self.request_queue = deque()
-        self.server_states = servermonitor.empty_states()
+        self.server_states = None
         self.action_space = self.num_models_per_server * self.num_servers + 1
         self.state_space = 4 + 5 * self.num_servers
         self.pipe_to_loadbalancer = pipe_to_loadbalancer
@@ -45,6 +46,24 @@ class DRL:
         model.add(tf.keras.layers.Dense(units=self.state_space, activation='linear'))
         model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam())
         return model
+
+    def prepare_server(self):
+        while self.server_states is None or len(self.server_states) < self.num_servers:
+            print('Servers not ready.')
+            print('Retrying after 5 seconds...')
+            time.sleep(5)
+        self.action_to_service = [None]  # action 0 map to None
+        for server_state in self.server_states.values():
+            for model in server_state.models:
+                service = {
+                    'region': server_state.region,
+                    'address': server_state.address,
+                    'model': model
+                }
+                self.action_to_service.append(json.dumps(service))
+
+    def return_service_address(self, action):
+        self.pipe_to_loadbalancer.send(self.action_to_service[action])
 
     def reward_function(result):
         if sum(result) == 2:
@@ -64,6 +83,9 @@ class DRL:
             prev_state = np.array([[0]*self.state_space])
             prev_action = 0
             end_of_last_observation = time.perf_counter_ns()
+
+            self.prepare_server()
+
             for e in range(1000):
                 memory = []
                 for t in range(self.batch_size):
@@ -74,7 +96,14 @@ class DRL:
 
                     # Read from servermonitor.py
                     if self.pipe_to_servermonitor.poll():
-                        self.server_states = self.pipe_to_servermonitor.recv()
+                        new_server_states = self.pipe_to_servermonitor.recv()
+                        for key, value in new_server_states.items():
+                            self.server_states[key] = value
+                    if self.server_states is None or len(self.server_states) < self.num_servers:
+                        print('Servers not ready.')
+                        print('Retrying after 5 seconds...')
+                        time.sleep(5)
+                        continue
 
                     # Read from loadbalancer.py
                     if self.pipe_to_loadbalancer.poll():
@@ -94,6 +123,8 @@ class DRL:
                         action = random.randrange(self.action_space)
                     else:
                         action = np.argmax(model.predict(state)[0])
+                    self.return_service_address(action)
+
                     self.explore_chance *= self.explore_chance_decay
 
                     # Get reward from evaluater

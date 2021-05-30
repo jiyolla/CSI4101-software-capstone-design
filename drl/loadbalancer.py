@@ -1,6 +1,5 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import argparse
-import json
 import pickle
 import threading
 

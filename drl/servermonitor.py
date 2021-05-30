@@ -17,12 +17,6 @@ from common import serverstate
 server_states = {}
 num_servers = 2
 
-def empty_states():
-    states = {}
-    for i in range(num_servers):
-        state = serverstate.ServerState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        states[i] = state
-    return states
 
 def report_to_drl(pipe_to_drl):
     while True:
@@ -57,7 +51,7 @@ class Handler(socketserver.BaseRequestHandler):
                 reporting = False
                 break
             with threading.Lock():
-                server_states[server_state.server_id] = server_state
+                server_states[server_state.address] = server_state
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):

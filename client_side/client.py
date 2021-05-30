@@ -1,9 +1,9 @@
 import json
 import pickle
 import random
+import traceback
 import concurrent.futures
 import time
-from datetime import datetime
 import argparse
 import sys
 import os
@@ -26,35 +26,38 @@ region_delay = {
 
 
 def send_request(req, load_balancer_addr, evaluater_addr):
-    # 1. Send request meta-data to load balancer to get serving server address
-    data = pickle.dumps(req)
-    res = requests.post(load_balancer_addr, data=data)
-    server = json.loads(res.text)
-    req.set_allocated(server)
+    try:
+        # 1. Send request meta-data to load balancer to get serving server address
+        data = pickle.dumps(req)
+        res = requests.post(load_balancer_addr, data=data)
+        server = json.loads(res.text)
+        req.set_allocated(server)
 
-    # 2. Send actual request to serving server
-    # Pre-processing. This should be moved to server side.
-    # Preprocessed data is about 30x larger.
-    model = eval(f'tf.keras.applications.{server["model"]}')
-    model_group = eval(f'tf.keras.applications.{model._keras_api_names[0].split(".")[2]}')
-    h, w = map(int, model.__doc__.split('input_shape: ')[1].split('`(')[1].split(',')[:2])
-    img = tf.keras.preprocessing.image.load_img(req.image_path, target_size=[h, w])
-    x = tf.keras.preprocessing.image.img_to_array(img)
-    x = model_group.preprocess_input(x[tf.newaxis, ...])
-    data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
-    headers = {"content-type": "application/json"}
-    req.set_preprocessed()
+        # 2. Send actual request to serving server
+        # Pre-processing. This should be moved to server side.
+        # Preprocessed data is about 30x larger.
+        model = eval(f'tf.keras.applications.{server["model"]}')
+        model_group = eval(f'tf.keras.applications.{model._keras_api_names[0].split(".")[2]}')
+        h, w = map(int, model.__doc__.split('input_shape: ')[1].split('`(')[1].split(',')[:2])
+        img = tf.keras.preprocessing.image.load_img(req.image_path, target_size=[h, w])
+        x = tf.keras.preprocessing.image.img_to_array(img)
+        x = model_group.preprocess_input(x[tf.newaxis, ...])
+        data = json.dumps({"signature_name": "serving_default", "instances": x.tolist()})
+        headers = {"content-type": "application/json"}
+        req.set_preprocessed()
 
-    json_response = requests.post(f'http://{server["address"]}/v1/models/{server["model"]}:predict', data=data, headers=headers)
-    predictions = json.loads(json_response.text)
+        json_response = requests.post(f'http://{server["address"]}/v1/models/{server["model"]}:predict', data=data, headers=headers)
+        predictions = json.loads(json_response.text)
 
-    # Introduce artifical network overhead here
-    time.sleep(region_delay[req.region][server['region']] * len(data)/10**6/2)
-    req.set_served(model_group.decode_predictions(np.array(predictions["predictions"]))[0][0][0])
+        # Introduce artifical network overhead here
+        time.sleep(region_delay[req.region][server['region']] * len(data)/10**6/2)
+        req.set_served(model_group.decode_predictions(np.array(predictions["predictions"]))[0][0][0])
 
-    # Send result to evaluater
-    data = pickle.dumps(req)
-    requests.post(evaluater_addr, data=data)
+        # Send result to evaluater
+        data = pickle.dumps(req)
+        requests.post(evaluater_addr, data=data)
+    except Exception as err:
+        traceback.print_tb(err.__traceback__)
 
 
 def uniform_request(load_balancer_addr, evaluater_addr, num_req_per_min):
@@ -89,7 +92,7 @@ def main():
     if args.configure:
         load_balancer_addr = f'http://{input("Load balancer ip address: ")}:{input("Load balancer port: ")}'
         evaluater_addr = f'http://{input("Evaluater ip address: ")}:{input("Evaluater port: ")}'
-        num_req = int(input('Number of requests: '))
+        num_req_per_min = int(input('Number of requests: '))
         # req_func = eval(input('Request function: '))
     req_func(load_balancer_addr, evaluater_addr, num_req_per_min)
 

@@ -22,7 +22,6 @@ def run(load, configure, tegrastats_flag):
     """
 
     # Collect server state info
-    server_id = 0
     region = 0
     name = 'jetson_nano_1'
     ip = '222.111.222.238'
@@ -37,13 +36,12 @@ def run(load, configure, tegrastats_flag):
 
     if configure:
         server_address = input('servermonitor ip: '), int(input('servermonitor port: '))
-        server_id = int(input('server_id: '))
         region = int(input('region: '))
         name = input('name: ')
         ip = input('ip: ')
         port = input('port: ')
 
-    server_state = serverstate.ServerState(server_id, region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage)
+    server_state = serverstate.ServerState(region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # Hardcoded
