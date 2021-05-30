@@ -63,6 +63,7 @@ def run(load, configure, tegrastats_flag):
         p_ifstat.stdout.readline()
         p_ifstat.stdout.readline()
         # Read contents
+        print('Start sending server state...')
         while(True):
             time.sleep(interval)
             ifstat = p_ifstat.stdout.readline().split()

@@ -48,10 +48,15 @@ class DRL:
         return model
 
     def prepare_server(self):
+        if self.pipe_to_servermonitor.poll():
+            self.server_states = self.pipe_to_servermonitor.recv()
         while self.server_states is None or len(self.server_states) < self.num_servers:
             print('Servers not ready.')
             print('Retrying after 5 seconds...')
             time.sleep(5)
+            if self.pipe_to_servermonitor.poll():
+                self.server_states = self.pipe_to_servermonitor.recv()
+        print('Servers ready.')
         self.action_to_service = [None]  # action 0 map to None
         for server_state in self.server_states.values():
             for model in server_state.models:
