@@ -57,17 +57,25 @@ def send_request(req, load_balancer_addr, evaluater_addr):
     requests.post(evaluater_addr, data=data)
 
 
-def uniform_request(load_balancer_addr, evaluater_addr, num_req, interval=0.25):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_req) as executor:
-        for i in range(num_req):
-            time.sleep(interval)
+def uniform_request(load_balancer_addr, evaluater_addr, num_req_per_min):
+    interval = 60 / num_req_per_min
+    end_of_last_request = time.perf_counter_ns()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        req_id = 0
+        while True:
+            req_id += 1
+            start_of_current_request = time.perf_counter_ns()
+            time_elapsed = (start_of_current_request - end_of_last_request) / 10**9
+            if time_elapsed < interval:
+                time.sleep(interval - time_elapsed)
+
             region = random.randrange(len(region_delay))
             image_id = f'ILSVRC2012_val_{str(random.randint(1, 100)).zfill(8)}'
             expected_accuracy = random.uniform(0.5, 1)
             expected_time = random.uniform(1, 10)
-            req = request.Request(i, region, image_id, expected_accuracy, expected_time)
+            req = request.Request(req_id, region, image_id, expected_accuracy, expected_time)
             executor.submit(send_request, req, load_balancer_addr, evaluater_addr)
-    
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -76,14 +84,14 @@ def main():
 
     load_balancer_addr = 'http://localhost:8000'
     evaluater_addr = 'http://localhost:8001'
-    num_req = 3
+    num_req_per_min = 3
     req_func = uniform_request
     if args.configure:
         load_balancer_addr = f'http://{input("Load balancer ip address: ")}:{input("Load balancer port: ")}'
         evaluater_addr = f'http://{input("Evaluater ip address: ")}:{input("Evaluater port: ")}'
         num_req = int(input('Number of requests: '))
         # req_func = eval(input('Request function: '))
-    req_func(load_balancer_addr, evaluater_addr, num_req)
+    req_func(load_balancer_addr, evaluater_addr, num_req_per_min)
 
 
 if __name__ == "__main__":

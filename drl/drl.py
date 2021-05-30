@@ -70,7 +70,7 @@ class DRL:
                     start_of_current_observation = time.perf_counter_ns()
                     time_elapsed = (start_of_current_observation - end_of_last_observation) / 10**9
                     if time_elapsed < self.observation_interval:
-                    time.sleep(self.observation_interval - time_elapsed)
+                        time.sleep(self.observation_interval - time_elapsed)
 
                     # Read from servermonitor.py
                     if self.pipe_to_servermonitor.poll():
