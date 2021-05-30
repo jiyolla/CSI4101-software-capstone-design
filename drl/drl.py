@@ -116,7 +116,9 @@ class DRL:
 
                     # If no request is present
                     # action fixed to do nothing
+                    no_request = False
                     if not self.request_queue:
+                        no_request = True
                         req_state = request.Request.empty_state()
                     else:
                         req_state = self.request_queue.popleft().to_state()
@@ -124,13 +126,15 @@ class DRL:
                     state = np.array([req_state + svr_state])
                     print(f'{e}-{t}: {state}')
 
-                    if random.random() < self.explore_chance:
-                        action = random.randrange(self.action_space)
+                    if no_request:
+                        action = 0
                     else:
-                        action = np.argmax(model.predict(state)[0])
-                    self.return_service_address(action)
-
-                    self.explore_chance *= self.explore_chance_decay
+                        if random.random() < self.explore_chance:
+                            action = random.randrange(self.action_space)
+                        else:
+                            action = np.argmax(model.predict(state)[0])
+                        self.explore_chance *= self.explore_chance_decay
+                        self.return_service_address(action)
 
                     # Get reward from evaluater
                     reward = 0
