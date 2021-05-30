@@ -89,7 +89,7 @@ class DRL:
         p_train = None
         ret = Queue()
         for e in range(1000):
-            prev_state = np.array([0]*self.state_space)
+            prev_state = np.array([[0]*self.state_space])
             prev_action = 0
             for t in range(self.batch_size):
                 time.sleep(self.observation_interval)
