@@ -1,13 +1,12 @@
-from multiprocessing import Process, Pipe, Queue
+from multiprocessing import Process, Pipe
 from collections import deque
 import time
-import threading
 import random
+import traceback
 import sys
 import os
 sys.path.append(os.path.join(sys.path[0], '..'))
 
-import tensorflow as tf
 import numpy as np
 
 from common import serverstate, request, available_models
@@ -21,8 +20,9 @@ import evaluater
 class DRL:
     def __init__(self, pipe_to_loadbalancer, pipe_to_servermonitor, pipe_to_evaluater):
         # Hpyerparemeter settings
-        self.batch_size = 100
-        self.observation_interval = 0.1
+        self.observation_interval = 0.25
+        self.seconds_per_batch = 10
+        self.batch_size = int(self.seconds_per_batch / self.observation_interval)
         self.explore_chance = 0.7
         self.final_explore_chance = 0.01
         self.explore_chance_decay = 0.995
@@ -31,7 +31,6 @@ class DRL:
         self.num_servers = servermonitor.num_servers
         self.num_models_per_server = len(available_models.lst)
         self.request_queue = deque()
-        self.memory = []
         self.server_states = servermonitor.empty_states()
         self.action_space = self.num_models_per_server * self.num_servers + 1
         self.state_space = 4 + 5 * self.num_servers
@@ -39,7 +38,7 @@ class DRL:
         self.pipe_to_servermonitor = pipe_to_servermonitor
         self.pipe_to_evaluater = pipe_to_evaluater
 
-    def build_model(self):
+    def build_model(self, tf):
         model = tf.keras.models.Sequential()
         model.add(tf.keras.layers.Dense(units=64, activation='relu', input_dim=self.state_space))
         model.add(tf.keras.layers.Dense(units=32, activation='relu'))
@@ -56,88 +55,101 @@ class DRL:
             reward = -20
         return reward
 
-    def batch_train(self, weights, ret):
-        model = self.build_model()
-        model.set_weights(weights)
-        batch = self.memory[:self.batch_size]
-        with threading.Lock():
-            self.memory = self.memory[self.batch_size:]
-
-        X = []
-        Y = []
-        for state, action, next_state, reward in batch:
-            print(state, action, next_state, reward)
-            print(model)
-            print(model.predict(next_state)[0])
-            print('2')
-            reward = reward + self.discount_factor * np.amax([0])
-            
-            target = model.predict(state)[0]
-            print('3')
-            target[action] = reward
-            X.append(state)
-            Y.append(target)
-        X = np.array(X)
-        Y = np.array(Y)
-        model.fit(X, Y, epochs=1)# , verbose=0)
-        print('finish training...')
-        ret.put(model)
-
-    def run_and_train(self):
-        model = self.build_model()
-        print(model)
-        p_train = None
-        ret = Queue()
-        for e in range(1000):
+    def serve(self, pipe_to_train):
+        try:
+            import tensorflow as tf
+            model = self.build_model(tf)
+            weights = pipe_to_train.recv()
+            model.set_weights(weights)
             prev_state = np.array([[0]*self.state_space])
             prev_action = 0
-            for t in range(self.batch_size):
-                time.sleep(self.observation_interval)
+            end_of_last_observation = time.perf_counter_ns()
+            for e in range(1000):
+                memory = []
+                for t in range(self.batch_size):
+                    start_of_current_observation = time.perf_counter_ns()
+                    time_elapsed = (start_of_current_observation - end_of_last_observation) / 10**9
+                    if time_elapsed < self.observation_interval:
+                    time.sleep(self.observation_interval - time_elapsed)
 
-                # Read from servermonitor.py
-                if self.pipe_to_servermonitor.poll():
-                    self.server_states = self.pipe_to_servermonitor.recv()
+                    # Read from servermonitor.py
+                    if self.pipe_to_servermonitor.poll():
+                        self.server_states = self.pipe_to_servermonitor.recv()
 
-                # Read from loadbalancer.py
-                if self.pipe_to_loadbalancer.poll():
-                    self.request_queue.append(self.pipe_to_loadbalancer.recv())
+                    # Read from loadbalancer.py
+                    if self.pipe_to_loadbalancer.poll():
+                        self.request_queue.append(self.pipe_to_loadbalancer.recv())
 
-                # If no request is present
-                # action fixed to do nothing
-                if not self.request_queue:
-                    req_state = request.Request.empty_state()
-                else:
-                    req_state = self.request_queue.popleft().to_state()
-                svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
-                state = np.array([req_state + svr_state])
-                print(f'{e}-{t}: {state}')
+                    # If no request is present
+                    # action fixed to do nothing
+                    if not self.request_queue:
+                        req_state = request.Request.empty_state()
+                    else:
+                        req_state = self.request_queue.popleft().to_state()
+                    svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
+                    state = np.array([req_state + svr_state])
+                    print(f'{e}-{t}: {state}')
 
-                if random.random() < self.explore_chance:
-                    action = random.randrange(self.action_space)
-                else:
-                    action = np.amax(model.predict(state)[0])
-                self.explore_chance *= self.explore_chance_decay
+                    if random.random() < self.explore_chance:
+                        action = random.randrange(self.action_space)
+                    else:
+                        action = np.argmax(model.predict(state)[0])
+                    self.explore_chance *= self.explore_chance_decay
 
-                # Get reward from evaluater
-                reward = 0
-                if self.pipe_to_evaluater.poll():
-                    reward = self.reward_function(self.pipe_to_evaluater.recv())
-                # print(reward)
+                    # Get reward from evaluater
+                    reward = 0
+                    if self.pipe_to_evaluater.poll():
+                        reward = self.reward_function(self.pipe_to_evaluater.recv())
+                    # print(reward)
 
-                with threading.Lock():
-                    self.memory.append((prev_state, prev_action, state, reward))
-                prev_state = state
-                prev_action = action
+                    memory.append((prev_state, prev_action, state, reward))
+                    prev_state = state
+                    prev_action = action
 
-            # start a thread to batch training a new model
-            # replace current model with new model upon completion
-            if p_train is not None:
-                model = ret.get()
-                print('waiting for join')
-                p_train.join()
-            print('calling batch_train...')
-            p_train = Process(target=self.batch_train, args=(model.get_weights(), ret))
-            p_train.start()
+                # start a thread to batch training a new model
+                # replace current model with new model upon completion
+                print('calling batch_train...')
+                pipe_to_train.send(memory[:])
+                if pipe_to_train.poll():
+                    print('updating model...')
+                    weights = pipe_to_train.recv()
+                    model.set_weights(weights)
+        except Exception as err:
+            traceback.print_tb(err.__traceback__)
+
+    def train(self, pipe_to_serve):
+        try:
+            import tensorflow as tf
+            model = self.build_model(tf)
+            pipe_to_serve.send(model.get_weights())
+            while True:
+                # Start batch train upon signal from serve process
+                memory = pipe_to_serve.recv()
+
+                X = []
+                Y = []
+                for state, action, next_state, reward in memory:
+                    print(state, action, next_state, reward)
+                    reward = reward + self.discount_factor * np.amax(model.predict(next_state)[0])
+                    target = model.predict(state)[0]
+                    target[action] = reward
+                    X.append(state[0])
+                    Y.append(target)
+                X = np.array(X)
+                Y = np.array(Y)
+                print('start training...')
+                model.fit(X, Y, epochs=1)# , verbose=0)
+                print('finish training...')
+                pipe_to_serve.send(model.get_weights())
+        except Exception as err:
+            traceback.print_tb(err.__traceback__)
+
+    def run(self):
+        pipe_1, pipe_2 = Pipe()
+        p_serve = Process(target=self.serve, args=(pipe_1, ))
+        p_train = Process(target=self.train, args=(pipe_2, ))
+        p_serve.start()
+        p_train.start()
 
 
 def main():
@@ -153,7 +165,7 @@ def main():
     p_evaluater.start()
 
     drl = DRL(pipe_to_loadbalancer, pipe_to_servermonitor, pipe_to_evaluater)
-    drl.run_and_train()
+    drl.run()
 
 
 if __name__ == '__main__':
