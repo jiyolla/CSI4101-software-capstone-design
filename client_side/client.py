@@ -33,7 +33,7 @@ def send_request(req, load_balancer_addr, evaluater_addr):
         res = requests.post(load_balancer_addr, data=data)
         server = json.loads(res.text)
         if 'Denied' in server:
-            requests.post(evaluater_addr, data=None)
+            requests.post(evaluater_addr, data=pickle.dumps(server))
             return
         req.set_allocated(server)
 

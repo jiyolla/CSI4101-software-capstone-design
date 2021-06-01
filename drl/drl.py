@@ -71,8 +71,8 @@ class DRL:
     def return_service_address(self, req_id, action):
         self.pipe_to_loadbalancer.send((req_id, self.action_to_service[action]))
 
-    def reward_function(result):
-        if result is None:
+    def reward_function(self, result):
+        if 'Denied' in result:
             # big penalty for denying request
             reward = -1000
         elif sum(result) == 2:
