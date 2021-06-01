@@ -58,7 +58,7 @@ class DRL:
                 # Exhaust the pipe since we are 5 secs late now
                 self.server_states = self.pipe_to_servermonitor.recv()
         print('Servers ready.')
-        self.action_to_service = [None]  # action 0 map to None
+        self.action_to_service = [{'Denied': True}]  # action 0 map to service denial
         for server_state in self.server_states.values():
             for model in server_state.models:
                 service = {
