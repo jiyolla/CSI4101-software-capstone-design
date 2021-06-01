@@ -58,7 +58,7 @@ class DRL:
                 # Exhaust the pipe since we are 5 secs late now
                 self.server_states = self.pipe_to_servermonitor.recv()
         print('Servers ready.')
-        self.action_to_service = [json.dumps({'Denied': True}).encode('utf8')]  # action 0 map to service denial
+        self.action_to_service = [json.dumps({'Denied': ''}).encode('utf8')]  # action 0 map to service denial
         for server_state in self.server_states.values():
             for model in server_state.models:
                 service = {
@@ -163,6 +163,7 @@ class DRL:
                     model.set_weights(weights)
         except Exception as err:
             traceback.print_tb(err.__traceback__)
+            print(err)
 
     def train(self, pipe_to_serve):
         try:
@@ -190,6 +191,7 @@ class DRL:
                 pipe_to_serve.send(model.get_weights())
         except Exception as err:
             traceback.print_tb(err.__traceback__)
+            print(err)
 
     def run(self):
         pipe_1, pipe_2 = Pipe()

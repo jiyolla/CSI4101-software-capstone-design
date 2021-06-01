@@ -28,13 +28,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         global c
         req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
-        
+
+        self.send_response(200)
         if req is None:
             print(f'A request is denied')
             c.report_to_drl(None)
-            
-
-        self.send_response(200)
+            return
 
         # Give reward to DRL based on req and its res
         print('-'*80)
@@ -54,8 +53,8 @@ class Handler(BaseHTTPRequestHandler):
         print(f'Ground truth: {df[df["ImageId"] == req.image_id]["PredictionString"].to_string(index=False)}')
         print(f'Prediction: {req.response}')
         print(f'is_correct: {is_correct}\n')
+        print('-'*80)
 
-        
         c.report_to_drl((is_timely, is_correct))
 
 
