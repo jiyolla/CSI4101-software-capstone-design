@@ -32,6 +32,8 @@ def send_request(req, load_balancer_addr, evaluater_addr):
         print(load_balancer_addr)
         res = requests.post(load_balancer_addr, data=data)
         server = json.loads(res.text)
+        if server is None:
+            
         req.set_allocated(server)
 
         # 2. Send actual request to serving server

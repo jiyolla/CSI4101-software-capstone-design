@@ -68,11 +68,14 @@ class DRL:
                 }
                 self.action_to_service.append(json.dumps(service))
 
-    def return_service_address(self, action):
-        self.pipe_to_loadbalancer.send(self.action_to_service[action])
+    def return_service_address(self, req_id, action):
+        self.pipe_to_loadbalancer.send((req_id, self.action_to_service[action]))
 
     def reward_function(result):
-        if sum(result) == 2:
+        if result is None:
+            # big penalty for denying request
+            reward = -1000
+        elif sum(result) == 2:
             reward = 100
         elif sum(result) == 1:
             reward = 30
@@ -122,7 +125,9 @@ class DRL:
                         no_request = True
                         req_state = request.Request.empty_state()
                     else:
-                        req_state = self.request_queue.popleft().to_state()
+                        req = self.request_queue.popleft()
+                        req_id = req.unique_id
+                        req_state = req.to_state()
                     svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
                     state = np.array([req_state + svr_state])
                     # print(f'{e}-{t}: {state}')
@@ -135,7 +140,7 @@ class DRL:
                         else:
                             action = np.argmax(model.predict(state)[0])
                         self.explore_chance *= self.explore_chance_decay
-                        self.return_service_address(action)
+                        self.return_service_address(req_id, action)
 
                     # Get reward from evaluater
                     reward = 0
