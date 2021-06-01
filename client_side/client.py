@@ -58,6 +58,7 @@ def send_request(req, load_balancer_addr, evaluater_addr):
         data = pickle.dumps(req)
         requests.post(evaluater_addr, data=data)
     except Exception as err:
+        print(err)
         traceback.print_tb(err.__traceback__)
 
 

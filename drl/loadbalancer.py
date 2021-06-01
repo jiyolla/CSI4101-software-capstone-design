@@ -19,9 +19,10 @@ class Communicator:
             if req_id in self.answers:
                 with threading.Lock():
                     return self.answers.pop(req_id)
-            answer = self.pipe_to_drl.recv()
-            with threading.Lock():
-                self.answers[answer[0]] = answer[1]
+            if self.pipe_to_drl.poll():
+                answer = self.pipe_to_drl.recv()
+                with threading.Lock():
+                    self.answers[answer[0]] = answer[1]
 
 
 c = Communicator()
