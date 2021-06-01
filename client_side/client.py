@@ -93,9 +93,9 @@ def main():
     parser.add_argument('-c', '--configure', help='Configure through interactive interface', action='store_true')
     args = parser.parse_args()
 
-    load_balancer_addr = 'http://localhost:8000'
-    evaluater_addr = 'http://localhost:8001'
-    num_req_per_min = 30
+    load_balancer_addr = 'http://35.202.25.144:8000'
+    evaluater_addr = 'http://35.202.25.144:8001'
+    num_req_per_min = 60
     req_func = uniform_request
     if args.configure:
         load_balancer_addr = f'http://{input("Load balancer ip address: ")}:{input("Load balancer port: ")}'
