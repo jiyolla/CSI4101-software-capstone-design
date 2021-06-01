@@ -19,8 +19,10 @@ num_servers = 2
 
 
 def report_to_drl(pipe_to_drl):
+    # This interval should be greater than drl observation interval and smaller than reportstate interval for sync issue
+    interval = 0.9
     while True:
-        time.sleep(0.1)
+        time.sleep(0.9)
         if len(server_states) == num_servers:
             pipe_to_drl.send(server_states)
 
