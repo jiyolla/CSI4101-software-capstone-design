@@ -37,6 +37,7 @@ class Handler(BaseHTTPRequestHandler):
         global c
         c.queries_to_drl(req)
         server = c.answer_from_drl(req.unique_id)
+        print(server)
 
         self.send_response(200)
         self.send_header('Content-type', 'application/json')

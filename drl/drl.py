@@ -58,7 +58,7 @@ class DRL:
                 # Exhaust the pipe since we are 5 secs late now
                 self.server_states = self.pipe_to_servermonitor.recv()
         print('Servers ready.')
-        self.action_to_service = [{'Denied': True}]  # action 0 map to service denial
+        self.action_to_service = [json.dumps({'Denied': True}).encode('utf8')]  # action 0 map to service denial
         for server_state in self.server_states.values():
             for model in server_state.models:
                 service = {
@@ -66,7 +66,7 @@ class DRL:
                     'address': server_state.address,
                     'model': model
                 }
-                self.action_to_service.append(json.dumps(service))
+                self.action_to_service.append(json.dumps(service).encode('utf8'))
 
     def return_service_address(self, req_id, action):
         self.pipe_to_loadbalancer.send((req_id, self.action_to_service[action]))
