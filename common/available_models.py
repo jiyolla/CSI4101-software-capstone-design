@@ -1,1 +1,1 @@
-lst = ['Xception', 'MobileNetV2', 'DenseNet121', 'EfficientNetB0']
+lst = ['Xception', 'MobileNetV2', 'DenseNet121', 'DenseNet169']
