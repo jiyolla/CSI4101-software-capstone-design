@@ -54,7 +54,8 @@ class DRL:
             print('Servers not ready.')
             print('Retrying after 5 seconds...')
             time.sleep(5)
-            if self.pipe_to_servermonitor.poll():
+            while self.pipe_to_servermonitor.poll():
+                # Exhaust the pipe since we are 5 secs late now
                 self.server_states = self.pipe_to_servermonitor.recv()
         print('Servers ready.')
         self.action_to_service = [None]  # action 0 map to None
