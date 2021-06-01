@@ -30,7 +30,7 @@ class Handler(BaseHTTPRequestHandler):
         req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
 
         self.send_response(200)
-        if 'Denied' in req:
+        if isinstance(req, dict) and 'Denied' in req:
             print(f'A request is denied')
             c.report_to_drl(req)
             return
