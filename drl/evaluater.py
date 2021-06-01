@@ -26,36 +26,40 @@ c = Communicator()
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
-        global c
-        req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
+        try:
+            global c
+            req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
 
-        self.send_response(200)
-        if isinstance(req, dict) and 'Denied' in req:
-            print(f'A request is denied')
-            c.report_to_drl(req)
-            return
+            self.send_response(200)
+            if isinstance(req, dict) and 'Denied' in req:
+                print(f'A request is denied')
+                c.report_to_drl(req)
+                return
 
-        # Give reward to DRL based on req and its res
-        print('-'*80)
-        print(f'Request region: {req.region}')
-        print(f'Served region: {req.served_by["region"]}')
-        print(f'Served model: {req.served_by["model"]}\n')
+            # Give reward to DRL based on req and its res
+            print('-'*80)
+            print(f'Request region: {req.region}')
+            print(f'Served region: {req.served_by["region"]}')
+            print(f'Served model: {req.served_by["model"]}\n')
 
-        # Time requirement
-        is_timely = req.elapsed_time <= req.expected_time
-        print(f'Elapsed time: {req.elapsed_time}')
-        print(f'Expected time: {req.expected_time}')
-        print(f'is_timely: {is_timely}\n')
+            # Time requirement
+            is_timely = req.elapsed_time <= req.expected_time
+            print(f'Elapsed time: {req.elapsed_time}')
+            print(f'Expected time: {req.expected_time}')
+            print(f'is_timely: {is_timely}\n')
 
-        # Accuracy requirement
-        is_correct = req.response in df[df['ImageId'] == req.image_id]['PredictionString'].to_string()
-        print(f'Image Id: {req.image_id}')
-        print(f'Ground truth: {df[df["ImageId"] == req.image_id]["PredictionString"].to_string(index=False)}')
-        print(f'Prediction: {req.response}')
-        print(f'is_correct: {is_correct}\n')
-        print('-'*80)
+            # Accuracy requirement
+            is_correct = req.response in df[df['ImageId'] == req.image_id]['PredictionString'].to_string()
+            print(f'Image Id: {req.image_id}')
+            print(f'Ground truth: {df[df["ImageId"] == req.image_id]["PredictionString"].to_string(index=False)}')
+            print(f'Prediction: {req.response}')
+            print(f'is_correct: {is_correct}\n')
+            print('-'*80)
 
-        c.report_to_drl((is_timely, is_correct))
+            c.report_to_drl((is_timely, is_correct))
+        except Exception as err:
+            traceback.print_tb(err.__traceback__)
+            print(err)
 
 
 def run(addr, port, pipe_to_drl):
