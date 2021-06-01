@@ -3,6 +3,7 @@ import socket
 import time
 import argparse
 import pickle
+import json
 import sys
 import os
 
@@ -11,40 +12,30 @@ from common import serverstate
 from common import available_models
 
 
-def run(load, configure, tegrastats_flag):
-    """
-    if load:
-        try:
-            with open(input('Type path to config file: '), 'rb') as f:
-                server_state = pickle.load(f)
-        except OSError:
-            print('Failed to load config file')
-    """
+def run(tegrastats_flag):
+
+    try:
+        with open('report.config', 'rb') as f:
+            config = json.load(f)
+            server_address = config['monitor server ip'], config['monitor server port']
+            region = config['region']
+            name = config['name']
+            ip = config['ip']
+            port = config['port']
+            
+    except OSError as e:
+        print('Failed to load config file')
+        raise e
 
     # Collect server state info
-    region = 0
-    name = 'jetson_nano_1'
-    ip = '222.111.222.238'
-    port = '8501'
     models = available_models.lst
     available_cpu = 0
     available_gpu = 0
     available_mem = 0
     network_usage = 0
-    server_address = 'localhost', 8002
-    interval = 1
-
-    if configure:
-        server_address = input('servermonitor ip: '), int(input('servermonitor port: '))
-        region = int(input('region: '))
-        name = input('name: ')
-        ip = input('ip: ')
-        port = input('port: ')
-
     server_state = serverstate.ServerState(region, name, ip, port, models, available_cpu, available_gpu, available_mem, network_usage)
-
+    
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        # Hardcoded
         connected = False
         while not connected:
             try:
@@ -64,6 +55,9 @@ def run(load, configure, tegrastats_flag):
         p_ifstat.stdout.readline()
         # Read contents
         print('Start sending server state...')
+        
+        # interval should be larger than drl observation interval for sync issue
+        interval = 1
         while(True):
             time.sleep(interval)
             ifstat = p_ifstat.stdout.readline().split()
@@ -92,25 +86,13 @@ def run(load, configure, tegrastats_flag):
 def main():
     parser = argparse.ArgumentParser(description='Collect and report system information')
     parser.add_argument(
-        '-l',
-        '--load',
-        action='store_true',
-        help='Load config file',
-    )
-    parser.add_argument(
-        '-c',
-        '--configure',
-        action='store_true',
-        help='Configure through interactive interface',
-    )
-    parser.add_argument(
         '-t',
         '--tegrastats',
         action='store_true',
         help='Collect tegrastats info',
     )
     args = parser.parse_args()
-    run(args.load, args.configure, args.tegrastats)
+    run(args.tegrastats)
 
 
 if __name__ == '__main__':
