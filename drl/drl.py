@@ -43,7 +43,7 @@ class DRL:
         model = tf.keras.models.Sequential()
         model.add(tf.keras.layers.Dense(units=64, activation='relu', input_dim=self.state_space))
         model.add(tf.keras.layers.Dense(units=32, activation='relu'))
-        model.add(tf.keras.layers.Dense(units=self.state_space, activation='linear'))
+        model.add(tf.keras.layers.Dense(units=self.action_space, activation='linear'))
         model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam())
         return model
 
@@ -69,6 +69,7 @@ class DRL:
                 self.action_to_service.append(json.dumps(service).encode('utf8'))
 
     def return_service_address(self, req_id, action):
+        print(f'Returning action {action}...')
         self.pipe_to_loadbalancer.send((req_id, self.action_to_service[action]))
 
     def reward_function(self, result):
@@ -146,7 +147,7 @@ class DRL:
                     reward = 0
                     if self.pipe_to_evaluater.poll():
                         reward = self.reward_function(self.pipe_to_evaluater.recv())
-                        print(reward)
+                        print(f'Reward from evaluater: {reward}')
 
                     memory.append((prev_state, prev_action, state, reward))
                     prev_state = state
