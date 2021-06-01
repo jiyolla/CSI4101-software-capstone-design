@@ -69,7 +69,6 @@ class DRL:
                 self.action_to_service.append(json.dumps(service).encode('utf8'))
 
     def return_service_address(self, req_id, action):
-        print(f'Returning action {action}...')
         self.pipe_to_loadbalancer.send((req_id, self.action_to_service[action]))
 
     def reward_function(self, result):
@@ -131,7 +130,8 @@ class DRL:
                         req_state = req.to_state()
                     svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
                     state = np.array([req_state + svr_state])
-                    # print(f'{e}-{t}: {state}')
+                    if t % 10 == 0:
+                        print(f'{e}-{t}: {state}')
 
                     if no_request:
                         action = 0

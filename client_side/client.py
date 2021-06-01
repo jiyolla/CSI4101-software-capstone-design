@@ -28,14 +28,16 @@ region_delay = {
 def send_request(req, load_balancer_addr, evaluater_addr):
     try:
         # 1. Send request meta-data to load balancer to get serving server address
+        print(f'Initiating request#{req.unique_id}...')
         data = pickle.dumps(req)
-        print(load_balancer_addr)
         res = requests.post(load_balancer_addr, data=data)
         server = json.loads(res.text)
         if 'Denied' in server:
+            print(f'Request#{req.unique_id} is denied')
             requests.post(evaluater_addr, data=pickle.dumps(server))
             return
         req.set_allocated(server)
+        print(f'Request#{req.unique_id} is to be handled by {server}')
 
         # 2. Send actual request to serving server
         # Pre-processing. This should be moved to server side.
@@ -93,7 +95,7 @@ def main():
 
     load_balancer_addr = 'http://localhost:8000'
     evaluater_addr = 'http://localhost:8001'
-    num_req_per_min = 3
+    num_req_per_min = 30
     req_func = uniform_request
     if args.configure:
         load_balancer_addr = f'http://{input("Load balancer ip address: ")}:{input("Load balancer port: ")}'

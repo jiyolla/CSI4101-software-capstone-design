@@ -15,7 +15,7 @@ from common import serverstate
 
 
 server_states = {}
-num_servers = 2
+num_servers = 3
 
 
 def report_to_drl(pipe_to_drl):
