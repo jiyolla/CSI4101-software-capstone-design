@@ -51,6 +51,7 @@ class DRL:
         model.add(tf.keras.layers.Dense(units=self.action_space, activation='linear'))
         model.add(tf.keras.layers.Dropout(0.2))
         model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam())
+
         return model
 
     def prepare_server(self):
@@ -200,6 +201,7 @@ class DRL:
                 self.log_episode(e, episode_reward)
                 print('='*80)
                 pipe_to_save_model.send((model.get_weights(), e))
+
                 if self.explore_chance > self.final_explore_chance:
                     self.explore_chance *= self.explore_chance_decay
                 
@@ -254,6 +256,7 @@ class DRL:
         p_serve = Process(target=self.serve, args=(pipe_1, pipe_3))
         p_train = Process(target=self.train, args=(pipe_2, ))
         p_save_model = Process(target=self.save_model, args=(pipe_4, ))
+
         p_serve.start()
         p_train.start()
         p_save_model.start()
