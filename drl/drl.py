@@ -44,8 +44,11 @@ class DRL:
     def build_model(self, tf):
         model = tf.keras.models.Sequential()
         model.add(tf.keras.layers.Dense(units=64, activation='relu', input_dim=self.state_space))
+        model.add(tf.keras.layers.BatchNormalization())
         model.add(tf.keras.layers.Dense(units=32, activation='relu'))
+        model.add(tf.keras.layers.BatchNormalization())
         model.add(tf.keras.layers.Dense(units=self.action_space, activation='linear'))
+        model.add(tf.keras.layers.Dropout(0.1))
         model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam())
         return model
 
@@ -131,8 +134,8 @@ class DRL:
                             req_state = req.to_state()
                         svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
                         state = np.array([req_state + svr_state])
-                        if t % 10 == 0:
-                            # print(f'{e}-{b}-{t}: {state}')
+                        # if t % 10 == 0:
+                        #     print(f'{e}-{b}-{t}: {state}')
 
                         if no_request:
                             action = 0
@@ -148,7 +151,7 @@ class DRL:
                         reward = 0
                         if self.pipe_to_evaluater.poll():
                             reward = self.reward_function(self.pipe_to_evaluater.recv())
-                            print(f'Reward from evaluater: {reward}')
+                            # print(f'Reward from evaluater: {reward}')
                         episode_reward += reward
 
                         memory.append((prev_state, prev_action, state, reward))
