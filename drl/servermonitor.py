@@ -16,6 +16,7 @@ from common import serverstate
 
 server_states = {}
 num_servers = 2
+lock = threading.Lock()
 
 
 def report_to_drl(pipe_to_drl):
@@ -52,7 +53,7 @@ class Handler(socketserver.BaseRequestHandler):
             except TypeError:
                 reporting = False
                 break
-            with threading.Lock():
+            with lock:
                 server_states[server_state.address] = server_state
 
 

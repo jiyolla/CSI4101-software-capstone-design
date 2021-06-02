@@ -3,6 +3,7 @@ import argparse
 import pickle
 import threading
 
+lock = threading.Lock()
 
 class Communicator:
     def __init__(self):
@@ -16,9 +17,9 @@ class Communicator:
 
     def answer_from_drl(self, req_id):
         while True:
-            if req_id in self.answers:
-                return self.answers.pop(req_id)
-            with threading.Lock():
+            with lock:
+                if req_id in self.answers:
+                        return self.answers.pop(req_id)
                 while self.pipe_to_drl.poll():
                     answer = self.pipe_to_drl.recv()
                     self.answers[answer[0]] = answer[1]
