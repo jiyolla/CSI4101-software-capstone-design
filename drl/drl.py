@@ -28,7 +28,7 @@ class DRL:
         self.batches_per_episode = int(self.seconds_per_episode / self.seconds_per_batch)
         self.explore_chance = 0.7
         self.final_explore_chance = 0.1
-        self.explore_chance_decay = 0.99
+        self.explore_chance_decay = 0.9
         self.discount_factor = 0.99
 
         self.num_servers = servermonitor.num_servers
@@ -43,13 +43,14 @@ class DRL:
 
     def build_model(self, tf):
         model = tf.keras.models.Sequential()
+        model.add(tf.keras.layers.BatchNormalization())
         model.add(tf.keras.layers.Dense(units=64, activation='relu', input_dim=self.state_space))
         model.add(tf.keras.layers.BatchNormalization())
         model.add(tf.keras.layers.Dense(units=32, activation='relu'))
         model.add(tf.keras.layers.BatchNormalization())
         model.add(tf.keras.layers.Dense(units=self.action_space, activation='linear'))
-        model.add(tf.keras.layers.Dropout(0.1))
-        model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam())
+        model.add(tf.keras.layers.Dropout(0.2))
+        model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam())
         return model
 
     def prepare_server(self):
@@ -81,7 +82,9 @@ class DRL:
         if 'Denied' in result:
             # big penalty for denying request
             self.count_denial += 1
-            reward = -1000
+            # reward = -1000
+            # giving instant negative reward now
+            reward = 0
             return reward
         self.count_timely += result[0]
         self.count_correct += result[1]
@@ -93,13 +96,27 @@ class DRL:
             reward = -20
         return reward
     
+    def log_episode(self, e, episode_reward):
+        with open(f'{sys.path[0]}/drl.log', 'a') as f:
+            f.write(f'Episode#{e} ended with reward: {episode_reward}')
+            f.write(f'Number of all requests: {self.count_all}')
+            f.write(f'Number of requests served in time: {self.count_timely}')
+            f.write(f'Number of requests served correctly: {self.count_correct}')
+            f.write(f'Number of requests denied: {self.count_denial}')
+
+            print(f'Episode#{e} ended with reward: {episode_reward}')
+            print(f'Number of all requests: {self.count_all}')
+            print(f'Number of requests served in time: {self.count_timely}')
+            print(f'Number of requests served correctly: {self.count_correct}')
+            print(f'Number of requests denied: {self.count_denial}')
+
     def reset_req_counters(self):
         self.count_all = 0
         self.count_timely = 0
         self.count_correct = 0
         self.count_denial = 0
 
-    def serve(self, pipe_to_train):
+    def serve(self, pipe_to_train, pipe_to_save_model):
         try:
             import tensorflow as tf
             model = self.build_model(tf)
@@ -149,17 +166,19 @@ class DRL:
                         # if t % 10 == 0:
                         #     print(f'{e}-{b}-{t}: {state}')
 
+                        reward = 0
                         if no_request:
                             action = 0
                         else:
                             if random.random() < self.explore_chance:
-                                action = random.randrange(self.action_space)
+                                action = random.randrange(1, self.action_space)
                             else:
                                 action = np.argmax(model.predict(state)[0])
+                                if action == 0:
+                                    reward = -1000
                             self.return_service_address(req_id, action)
 
                         # Get reward from evaluater
-                        reward = 0
                         if self.pipe_to_evaluater.poll():
                             reward = self.reward_function(self.pipe_to_evaluater.recv())
                             # print(f'Reward from evaluater: {reward}')
@@ -178,14 +197,12 @@ class DRL:
                         # print('updating model...')
                         weights = pipe_to_train.recv()
                         model.set_weights(weights)
-                print(f'Episode#{e} ended with reward: {episode_reward}')
-                print(f'Number of all requests: {}')
-                print(f'Number of requests served in time: {self.count_timely}')
-                print(f'Number of requests served correctly: {self.count_correct}')
-                print(f'Number of requests denied: {self.count_denial}')
+                self.log_episode(e, episode_reward)
                 print('='*80)
+                pipe_to_save_model.send((model.get_weights(), e))
                 if self.explore_chance > self.final_explore_chance:
                     self.explore_chance *= self.explore_chance_decay
+                
         except Exception as err:
             traceback.print_tb(err.__traceback__)
             print(err)
@@ -217,13 +234,29 @@ class DRL:
         except Exception as err:
             traceback.print_tb(err.__traceback__)
             print(err)
+        
+    def save_model(self, pipe_to_serve):
+        try:
+            import tensorflow as tf
+            model = self.build_model(tf)
+            while True:
+                weights, e = pipe_to_serve.recv()
+                print(f'Saving DQN...')
+                model.set_weights(weights)
+                tf.saved_model.save(model, f'{sys.path[0]}/dqn_export/{e}')
+        except Exception as err:
+            traceback.print_tb(err.__traceback__)
+            print(err)
 
     def run(self):
         pipe_1, pipe_2 = Pipe()
-        p_serve = Process(target=self.serve, args=(pipe_1, ))
+        pipe_3, pipe_4 = Pipe()
+        p_serve = Process(target=self.serve, args=(pipe_1, pipe_3))
         p_train = Process(target=self.train, args=(pipe_2, ))
+        p_save_model = Process(target=self.save_model, args=(pipe_4, ))
         p_serve.start()
         p_train.start()
+        p_save_model.start()
 
 
 def main():

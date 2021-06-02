@@ -1,3 +1,5 @@
 goorm.manifest
 __pycache__/
 service_side/models/
+drl/dqn_export/
+drl/drl.log
