@@ -43,6 +43,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(server)
 
+    def log_message(self, *args):
+        """Silence logging"""
 
 def run(addr, port, pipe_to_drl):
     c.set_pipe(pipe_to_drl)

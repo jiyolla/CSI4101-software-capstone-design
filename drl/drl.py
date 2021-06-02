@@ -132,7 +132,7 @@ class DRL:
                         svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
                         state = np.array([req_state + svr_state])
                         if t % 10 == 0:
-                            print(f'{e}-{b}-{t}: {state}')
+                            # print(f'{e}-{b}-{t}: {state}')
 
                         if no_request:
                             action = 0
@@ -158,10 +158,10 @@ class DRL:
 
                     # start a thread to batch training a new model
                     # replace current model with new model upon completion
-                    print('calling batch_train...')
+                    # print('calling batch_train...')
                     pipe_to_train.send(memory[:])
                     if pipe_to_train.poll():
-                        print('updating model...')
+                        # print('updating model...')
                         weights = pipe_to_train.recv()
                         model.set_weights(weights)
                 print(f'Episode#{e} ended with reward: {episode_reward}')

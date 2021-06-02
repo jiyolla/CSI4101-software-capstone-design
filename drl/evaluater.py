@@ -40,29 +40,34 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             # Give reward to DRL based on req and its res
-            print('-'*80)
-            print(f'Request region: {req.region}')
-            print(f'Served region: {req.served_by["region"]}')
-            print(f'Served model: {req.served_by["model"]}\n')
+            print_to_stdout = []
+            print_to_stdout.append('-'*80)
+            print_to_stdout.append(f'Request region: {req.region}')
+            print_to_stdout.append(f'Served region: {req.served_by["region"]}')
+            print_to_stdout.append(f'Served model: {req.served_by["model"]}\n')
 
             # Time requirement
             is_timely = req.elapsed_time <= req.expected_time
-            print(f'Elapsed time: {req.elapsed_time}')
-            print(f'Expected time: {req.expected_time}')
-            print(f'is_timely: {is_timely}\n')
+            print_to_stdout.append(f'Elapsed time: {req.elapsed_time}')
+            print_to_stdout.append(f'Expected time: {req.expected_time}')
+            print_to_stdout.append(f'is_timely: {is_timely}\n')
 
             # Accuracy requirement
             is_correct = req.response in df[df['ImageId'] == req.image_id]['PredictionString'].to_string()
-            print(f'Image Id: {req.image_id}')
-            print(f'Ground truth: {df[df["ImageId"] == req.image_id]["PredictionString"].to_string(index=False)}')
-            print(f'Prediction: {req.response}')
-            print(f'is_correct: {is_correct}\n')
-            print('-'*80)
+            print_to_stdout.append(f'Image Id: {req.image_id}')
+            print_to_stdout.append(f'Ground truth: {df[df["ImageId"] == req.image_id]["PredictionString"].to_string(index=False)}')
+            print_to_stdout.append(f'Prediction: {req.response}')
+            print_to_stdout.append(f'is_correct: {is_correct}\n')
+            print_to_stdout.append('-'*80)
+            print('\n'.join(print_to_stdout))
 
             c.report_to_drl((is_timely, is_correct))
         except Exception as err:
             traceback.print_tb(err.__traceback__)
             print(err)
+
+    def log_message(self, *args):
+        """Silence logging"""
 
 
 def run(addr, port, pipe_to_drl):
