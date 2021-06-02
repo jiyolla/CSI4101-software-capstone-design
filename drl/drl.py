@@ -49,7 +49,7 @@ class DRL:
         model.add(tf.keras.layers.BatchNormalization())
         model.add(tf.keras.layers.Dense(units=self.action_space, activation='linear'))
         model.add(tf.keras.layers.Dropout(0.1))
-        model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam())
+        model.compile(loss=tf.keras.losses.MSE(), optimizer=tf.keras.optimizers.Adam())
         return model
 
     def prepare_server(self):
@@ -99,7 +99,7 @@ class DRL:
         self.count_correct = 0
         self.count_denial = 0
 
-    def serve(self, pipe_to_train):
+    def serve(self, pipe_to_train, pipe_to_save_model):
         try:
             import tensorflow as tf
             model = self.build_model(tf)
@@ -184,8 +184,10 @@ class DRL:
                 print(f'Number of requests served correctly: {self.count_correct}')
                 print(f'Number of requests denied: {self.count_denial}')
                 print('='*80)
+                self.pipe_to_save_model.send((model.get_weights(), e))
                 if self.explore_chance > self.final_explore_chance:
                     self.explore_chance *= self.explore_chance_decay
+                
         except Exception as err:
             traceback.print_tb(err.__traceback__)
             print(err)
@@ -217,13 +219,29 @@ class DRL:
         except Exception as err:
             traceback.print_tb(err.__traceback__)
             print(err)
+        
+    def save_model(self, pipe_to_serve):
+        try:
+            import tensorflow as tf
+            model = self.build_model(tf)
+            while True:
+                weights, e = pipe_to_serve.recv()
+                print(f'Saving DQN...')
+                model.set_weights(weights)
+                tf.saved_model.save(model, f'{sys.path[0]}/dqn_export/{e}')
+        except Exception as err:
+            traceback.print_tb(err.__traceback__)
+            print(err)
 
     def run(self):
         pipe_1, pipe_2 = Pipe()
+        pipe_3, pipe_4 = Pipe()
         p_serve = Process(target=self.serve, args=(pipe_1, ))
-        p_train = Process(target=self.train, args=(pipe_2, ))
+        p_train = Process(target=self.train, args=(pipe_2, pipe_3))
+        p_save_model = Process(target=self.save_model, args(pipe_4, ))
         p_serve.start()
         p_train.start()
+        p_save_model.start()
 
 
 def main():
