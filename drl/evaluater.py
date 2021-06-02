@@ -30,9 +30,20 @@ class Evaluater:
         self.both_good = 0
         self.both_bad = 0
 
+    def add(self, is_timely, is_correct):
+        self.all += 1
+        if is_timely and is_correct:
+            self.both_good += 1
+        elif is_timely:
+            self.only_timely += 1
+        elif is_correct:
+            self.only_correct += 1
+        else:
+            self.both_bad += 1
+
     @property
     def score(self):
-        
+        return (self.both_good + 0.7*self.only_correct + 0.3*self.only_timely - self.both_bad) / self.all
 
     def __repr__(self):
         return f'{self.all} | {self.both_good} | {self.only_timely} | {self.only_correct} | {self.both_bad} | {self.score}'
@@ -53,24 +64,14 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             if isinstance(req, dict) and 'Denied' in req:
                 # print(f'A request is denied')
-                e.all += 1
-                e.both_bad += 1
-                c.report_to_drl(req)
+                e.add(False, False)
                 return
 
             # Give reward to DRL based on req and its res
             is_timely = req.elapsed_time <= req.expected_time
             is_correct = req.response in df[df['ImageId'] == req.image_id]['PredictionString'].to_string()
+            e.add(is_timely, is_correct)
 
-            e.all += 1
-            if is_timely and is_correct:
-                e.both_good += 1
-            elif is_timely:
-                e.only_timely += 1
-            elif is_correct:
-                e.only_correct += 1
-            else:
-                e.both_bad += 1
             if e.all % 100 == 0:
                 with open(f'{sys.path[0]}/evaluater.log', 'a') as f:
                     f.write(e)

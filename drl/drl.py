@@ -79,47 +79,35 @@ class DRL:
         self.pipe_to_loadbalancer.send((req_id, self.action_to_service[action]))
 
     def reward_function(self, result):
-        self.count_all += 1
         if 'Denied' in result:
             # big penalty for denying request
-            self.count_denial += 1
             # reward = -1000
             # giving instant negative reward now
             reward = 0
             return reward
-        self.count_timely += result[0]
-        self.count_correct += result[1]
-        if sum(result) == 2:
+        if result[0] and result[1]:
             reward = 100
-        elif sum(result) == 1:
+        elif result[1]:
+            reward = 70
+        elif result[0]:
             reward = 30
         else:
             reward = -20
         return reward
-    
-    def log_episode(self, e, episode_reward):
+
+    def log_episode(self, e, episode_reward, eva):
         with open(f'{sys.path[0]}/drl.log', 'a') as f:
             f.write(f'Episode#{e} ended with reward: {episode_reward}')
-            f.write(f'Number of all requests: {self.count_all}')
-            f.write(f'Number of requests served in time: {self.count_timely}')
-            f.write(f'Number of requests served correctly: {self.count_correct}')
-            f.write(f'Number of requests denied: {self.count_denial}')
+            f.write(f'{eva}')
 
             print(f'Episode#{e} ended with reward: {episode_reward}')
-            print(f'Number of all requests: {self.count_all}')
-            print(f'Number of requests served in time: {self.count_timely}')
-            print(f'Number of requests served correctly: {self.count_correct}')
-            print(f'Number of requests denied: {self.count_denial}')
-
-    def reset_req_counters(self):
-        self.count_all = 0
-        self.count_timely = 0
-        self.count_correct = 0
-        self.count_denial = 0
+            print(f'{eva}')
 
     def serve(self, pipe_to_train, pipe_to_save_model):
         try:
             import tensorflow as tf
+            with open(f'{sys.path[0]}/drl.log', 'w') as f:
+                f.write('')
             model = self.build_model(tf)
             weights = pipe_to_train.recv()
             model.set_weights(weights)
@@ -130,7 +118,7 @@ class DRL:
             self.prepare_server()
 
             for e in range(1000):
-                self.reset_req_counters()
+                eva = evaluater.Evaluater()
                 print('='*80)
                 print(f'Starting Episode#{e}...')
                 episode_reward = 0
@@ -181,7 +169,9 @@ class DRL:
 
                         # Get reward from evaluater
                         if self.pipe_to_evaluater.poll():
-                            reward = self.reward_function(self.pipe_to_evaluater.recv())
+                            res = self.pipe_to_evaluater.recv()
+                            reward = self.reward_function(res)
+                            eva.add(res)
                             # print(f'Reward from evaluater: {reward}')
                         episode_reward += reward
 
@@ -198,7 +188,7 @@ class DRL:
                         # print('updating model...')
                         weights = pipe_to_train.recv()
                         model.set_weights(weights)
-                self.log_episode(e, episode_reward)
+                self.log_episode(e, episode_reward, eva)
                 print('='*80)
                 pipe_to_save_model.send((model.get_weights(), e))
 
