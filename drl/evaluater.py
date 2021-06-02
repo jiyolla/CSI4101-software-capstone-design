@@ -74,7 +74,7 @@ class Handler(BaseHTTPRequestHandler):
 
             if e.all % 100 == 0:
                 with open(f'{sys.path[0]}/evaluater.log', 'a') as f:
-                    f.write(e)
+                    f.write(str(e))
             """
             print_to_stdout = []
             print_to_stdout.append('-'*80)
