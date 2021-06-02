@@ -16,12 +16,11 @@ class Communicator:
 
     def answer_from_drl(self, req_id):
         while True:
-            if req_id in self.answers:
-                with threading.Lock():
-                    return self.answers.pop(req_id)
-            if self.pipe_to_drl.poll():
-                answer = self.pipe_to_drl.recv()
-                with threading.Lock():
+            with threading.Lock():
+                if req_id in self.answers:
+                        return self.answers.pop(req_id)
+                while self.pipe_to_drl.poll():
+                    answer = self.pipe_to_drl.recv()
                     self.answers[answer[0]] = answer[1]
 
 
