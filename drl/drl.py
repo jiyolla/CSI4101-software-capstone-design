@@ -171,7 +171,7 @@ class DRL:
                         if self.pipe_to_evaluater.poll():
                             res = self.pipe_to_evaluater.recv()
                             reward = self.reward_function(res)
-                            eva.add(res)
+                            eva.add(*res)
                             # print(f'Reward from evaluater: {reward}')
                         episode_reward += reward
 
