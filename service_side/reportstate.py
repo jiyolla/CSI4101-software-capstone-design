@@ -57,7 +57,7 @@ def run(tegrastats_flag):
         print('Start sending server state...')
         
         # interval should be larger than drl observation interval for sync issue
-        interval = 1
+        interval = 0.5
         while(True):
             time.sleep(interval)
             ifstat = p_ifstat.stdout.readline().split()

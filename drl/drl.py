@@ -24,6 +24,8 @@ class DRL:
         self.observation_interval = 0.25
         self.seconds_per_batch = 10
         self.batch_size = int(self.seconds_per_batch / self.observation_interval)
+        self.seconds_per_episode = 180
+        self.batches_per_episode = int(seconds_per_episode / seconds_per_batch)
         self.explore_chance = 0.7
         self.final_explore_chance = 0.01
         self.explore_chance_decay = 0.995
@@ -96,72 +98,74 @@ class DRL:
             self.prepare_server()
 
             for e in range(1000):
-                memory = []
-                for t in range(self.batch_size):
-                    start_of_current_observation = time.perf_counter_ns()
-                    time_elapsed = (start_of_current_observation - end_of_last_observation) / 10**9
-                    if time_elapsed < self.observation_interval:
-                        time.sleep(self.observation_interval - time_elapsed)
+                print('='*80)
+                print(f'Starting Episode#{e}...')
+                episode_reward = 0
+                for b in range(self.batches_per_episode):
+                    memory = []
+                    for t in range(self.batch_size):
+                        start_of_current_observation = time.perf_counter_ns()
+                        time_elapsed = (start_of_current_observation - end_of_last_observation) / 10**9
+                        if time_elapsed < self.observation_interval:
+                            time.sleep(self.observation_interval - time_elapsed)
 
-                    # Read from servermonitor.py
-                    if self.pipe_to_servermonitor.poll():
-                        new_server_states = self.pipe_to_servermonitor.recv()
-                        for key, value in new_server_states.items():
-                            self.server_states[key] = value
-                    if self.server_states is None or len(self.server_states) < self.num_servers:
-                        print('Servers not ready.')
-                        print('Retrying after 5 seconds...')
-                        time.sleep(5)
-                        continue
+                        # Read from servermonitor.py
+                        if self.pipe_to_servermonitor.poll():
+                            new_server_states = self.pipe_to_servermonitor.recv()
+                            for key, value in new_server_states.items():
+                                self.server_states[key] = value
 
-                    # Read from loadbalancer.py
-                    if self.pipe_to_loadbalancer.poll():
-                        self.request_queue.append(self.pipe_to_loadbalancer.recv())
+                        # Read from loadbalancer.py
+                        if self.pipe_to_loadbalancer.poll():
+                            self.request_queue.append(self.pipe_to_loadbalancer.recv())
 
-                    # If no request is present
-                    # action fixed to do nothing
-                    no_request = False
-                    if not self.request_queue:
-                        no_request = True
-                        req_state = request.Request.empty_state()
-                    else:
-                        req = self.request_queue.popleft()
-                        req_id = req.unique_id
-                        req_state = req.to_state()
-                    svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
-                    state = np.array([req_state + svr_state])
-                    if t % 10 == 0:
-                        print(f'{e}-{t}: {state}')
-
-                    if no_request:
-                        action = 0
-                    else:
-                        if random.random() < self.explore_chance:
-                            action = random.randrange(self.action_space)
+                        # If no request is present
+                        # action fixed to do nothing
+                        no_request = False
+                        if not self.request_queue:
+                            no_request = True
+                            req_state = request.Request.empty_state()
                         else:
-                            action = np.argmax(model.predict(state)[0])
-                        self.explore_chance *= self.explore_chance_decay
-                        self.return_service_address(req_id, action)
+                            req = self.request_queue.popleft()
+                            req_id = req.unique_id
+                            req_state = req.to_state()
+                        svr_state = [state_el for server_state in self.server_states.values() for state_el in server_state.to_state()]
+                        state = np.array([req_state + svr_state])
+                        if t % 10 == 0:
+                            print(f'{e}-{b}-{t}: {state}')
 
-                    # Get reward from evaluater
-                    reward = 0
-                    if self.pipe_to_evaluater.poll():
-                        reward = self.reward_function(self.pipe_to_evaluater.recv())
-                        print(f'Reward from evaluater: {reward}')
+                        if no_request:
+                            action = 0
+                        else:
+                            if random.random() < self.explore_chance:
+                                action = random.randrange(self.action_space)
+                            else:
+                                action = np.argmax(model.predict(state)[0])
+                            self.explore_chance *= self.explore_chance_decay
+                            self.return_service_address(req_id, action)
 
-                    memory.append((prev_state, prev_action, state, reward))
-                    prev_state = state
-                    prev_action = action
-                    end_of_last_observation = time.perf_counter_ns()
+                        # Get reward from evaluater
+                        reward = 0
+                        if self.pipe_to_evaluater.poll():
+                            reward = self.reward_function(self.pipe_to_evaluater.recv())
+                            print(f'Reward from evaluater: {reward}')
+                        episode_reward += reward
 
-                # start a thread to batch training a new model
-                # replace current model with new model upon completion
-                print('calling batch_train...')
-                pipe_to_train.send(memory[:])
-                if pipe_to_train.poll():
-                    print('updating model...')
-                    weights = pipe_to_train.recv()
-                    model.set_weights(weights)
+                        memory.append((prev_state, prev_action, state, reward))
+                        prev_state = state
+                        prev_action = action
+                        end_of_last_observation = time.perf_counter_ns()
+
+                    # start a thread to batch training a new model
+                    # replace current model with new model upon completion
+                    print('calling batch_train...')
+                    pipe_to_train.send(memory[:])
+                    if pipe_to_train.poll():
+                        print('updating model...')
+                        weights = pipe_to_train.recv()
+                        model.set_weights(weights)
+                print(f'Episode#{e} ended with reward: {episode_reward}')
+                print('='*80)
         except Exception as err:
             traceback.print_tb(err.__traceback__)
             print(err)
