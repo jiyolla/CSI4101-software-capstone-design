@@ -43,8 +43,8 @@ class DRL:
 
     def build_model(self, tf):
         model = tf.keras.models.Sequential()
-        model.add(tf.keras.layers.BatchNormalization())
-        model.add(tf.keras.layers.Dense(units=64, activation='relu', input_dim=self.state_space))
+        model.add(tf.keras.layers.BatchNormalization(input_dim=self.state_space))
+        model.add(tf.keras.layers.Dense(units=64, activation='relu'))
         model.add(tf.keras.layers.BatchNormalization())
         model.add(tf.keras.layers.Dense(units=32, activation='relu'))
         model.add(tf.keras.layers.BatchNormalization())
