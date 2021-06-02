@@ -22,13 +22,30 @@ class Communicator:
         self.pipe_to_drl.send(result)
 
 
+class Evaluater:
+    def __init__(self):
+        self.all = 0
+        self.only_correct = 0
+        self.only_timely = 0
+        self.both_good = 0
+        self.both_bad = 0
+
+    @property
+    def score(self):
+        
+
+    def __repr__(self):
+        return f'{self.all} | {self.both_good} | {self.only_timely} | {self.only_correct} | {self.both_bad} | {self.score}'
+
+
 c = Communicator()
+e = Evaluater()
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
-            global c
+            global c, e
             req = pickle.loads(self.rfile.read(int(self.headers['Content-Length'])))
 
             self.send_response(200)
@@ -36,13 +53,27 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             if isinstance(req, dict) and 'Denied' in req:
                 # print(f'A request is denied')
+                e.all += 1
+                e.both_bad += 1
                 c.report_to_drl(req)
                 return
 
             # Give reward to DRL based on req and its res
             is_timely = req.elapsed_time <= req.expected_time
             is_correct = req.response in df[df['ImageId'] == req.image_id]['PredictionString'].to_string()
-            
+
+            e.all += 1
+            if is_timely and is_correct:
+                e.both_good += 1
+            elif is_timely:
+                e.only_timely += 1
+            elif is_correct:
+                e.only_correct += 1
+            else:
+                e.both_bad += 1
+            if e.all % 100 == 0:
+                with open(f'{sys.path[0]}/evaluater.log', 'a') as f:
+                    f.write(e)
             """
             print_to_stdout = []
             print_to_stdout.append('-'*80)
@@ -74,6 +105,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run(addr, port, pipe_to_drl):
+    with open(f'{sys.path[0]}/evaluater.log', 'w') as f:
+        f.write('req count | both good | only timely | only correct | both bad | score')
     c.set_pipe(pipe_to_drl)
     server_address = (addr, port)
     server = ThreadingHTTPServer(server_address, Handler)

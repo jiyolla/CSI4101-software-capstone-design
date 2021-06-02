@@ -92,7 +92,11 @@ def uniform_request(load_balancer_addr, evaluater_addr, num_req_per_min):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--configure', help='Configure through interactive interface', action='store_true')
+    parser.add_argument('-t', '--testcase', help='Generate test case with determined seed', action='store_true')
     args = parser.parse_args()
+
+    if args.testcase:
+        random.seed(4101)
 
     load_balancer_addr = 'http://35.202.25.144:8000'
     evaluater_addr = 'http://35.202.25.144:8001'
