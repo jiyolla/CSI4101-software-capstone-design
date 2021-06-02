@@ -27,9 +27,9 @@ class DRL:
         self.seconds_per_episode = 180
         self.batches_per_episode = int(self.seconds_per_episode / self.seconds_per_batch)
         self.explore_chance = 0.7
-        self.final_explore_chance = 0.01
-        self.explore_chance_decay = 0.995
-        self.discount_factor = 0.999
+        self.final_explore_chance = 0.1
+        self.explore_chance_decay = 0.99
+        self.discount_factor = 0.99
 
         self.num_servers = servermonitor.num_servers
         self.num_models_per_server = len(available_models.lst)
@@ -77,16 +77,27 @@ class DRL:
         self.pipe_to_loadbalancer.send((req_id, self.action_to_service[action]))
 
     def reward_function(self, result):
+        self.count_all += 1
         if 'Denied' in result:
             # big penalty for denying request
+            self.count_denial += 1
             reward = -1000
-        elif sum(result) == 2:
+            return reward
+        self.count_timely += result[0]
+        self.count_correct += result[1]
+        if sum(result) == 2:
             reward = 100
         elif sum(result) == 1:
             reward = 30
         else:
             reward = -20
         return reward
+    
+    def reset_req_counters(self):
+        self.count_all = 0
+        self.count_timely = 0
+        self.count_correct = 0
+        self.count_denial = 0
 
     def serve(self, pipe_to_train):
         try:
@@ -101,6 +112,7 @@ class DRL:
             self.prepare_server()
 
             for e in range(1000):
+                self.reset_req_counters()
                 print('='*80)
                 print(f'Starting Episode#{e}...')
                 episode_reward = 0
@@ -144,7 +156,6 @@ class DRL:
                                 action = random.randrange(self.action_space)
                             else:
                                 action = np.argmax(model.predict(state)[0])
-                            self.explore_chance *= self.explore_chance_decay
                             self.return_service_address(req_id, action)
 
                         # Get reward from evaluater
@@ -168,7 +179,13 @@ class DRL:
                         weights = pipe_to_train.recv()
                         model.set_weights(weights)
                 print(f'Episode#{e} ended with reward: {episode_reward}')
+                print(f'Number of all requests: {}')
+                print(f'Number of requests served in time: {self.count_timely}')
+                print(f'Number of requests served correctly: {self.count_correct}')
+                print(f'Number of requests denied: {self.count_denial}')
                 print('='*80)
+                if self.explore_chance > self.final_explore_chance:
+                    self.explore_chance *= self.explore_chance_decay
         except Exception as err:
             traceback.print_tb(err.__traceback__)
             print(err)
