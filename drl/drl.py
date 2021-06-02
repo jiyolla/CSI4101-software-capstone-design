@@ -179,7 +179,7 @@ class DRL:
                         weights = pipe_to_train.recv()
                         model.set_weights(weights)
                 print(f'Episode#{e} ended with reward: {episode_reward}')
-                print(f'Number of all requests: {}')
+                print(f'Number of all requests: {self.count_all}')
                 print(f'Number of requests served in time: {self.count_timely}')
                 print(f'Number of requests served correctly: {self.count_correct}')
                 print(f'Number of requests denied: {self.count_denial}')
