@@ -96,7 +96,7 @@ def main():
 
     load_balancer_addr = 'http://35.202.25.144:8000'
     evaluater_addr = 'http://35.202.25.144:8001'
-    num_req_per_min = 90
+    num_req_per_min = 120
     req_func = uniform_request
     if args.configure:
         load_balancer_addr = f'http://{input("Load balancer ip address: ")}:{input("Load balancer port: ")}'
