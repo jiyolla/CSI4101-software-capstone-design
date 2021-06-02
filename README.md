@@ -9,11 +9,13 @@
 
 
 ### Things To Do
-1. Solve drl predict hang issue
-2. Action mapping dqn to service model + server(json)
-3. Evaluate load balancer performance and compare with random load balancer
+1. Make test request series and evaluater
+2. Implement random load balancer
+3. Implement region aware load balancer
+4. Run drl for 1 an hour
+5. Compare the result of 3 load balancer
 
-4. Automate deployment.
+5. Automate deployment.
     1. Include dockerfile of the service server. Also probably include some bash command for multiple docker each serving a single model.
     2. Scripts to install prerequisite.
 
@@ -30,7 +32,7 @@
 
 **evaluater.py:**  
 1. Load ImageNet validation solutions.
-2. Listen from client response reports and parse feed to drl.py
+2. Listen from client response reports, parse and feed to drl.py
 
 **servermonitor.py**  
 1. Listen for state reports from servermonitor.py
