@@ -80,7 +80,7 @@ def uniform_request(load_balancer_addr, evaluater_addr, num_req_per_min):
                 time.sleep(interval - time_elapsed)
 
             region = random.randrange(len(region_delay))
-            image_id = f'ILSVRC2012_val_{str(random.randint(1, 100)).zfill(8)}'
+            image_id = f'ILSVRC2012_val_{str(random.randint(1, 1000)).zfill(8)}'
             expected_accuracy = random.uniform(0.5, 1)
             expected_time = random.uniform(1, 10)
             req = request.Request(req_id, region, image_id, expected_accuracy, expected_time)
