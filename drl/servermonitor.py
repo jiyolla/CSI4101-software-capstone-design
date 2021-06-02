@@ -15,7 +15,7 @@ from common import serverstate
 
 
 server_states = {}
-num_servers = 2
+num_servers = 3
 lock = threading.Lock()
 
 
