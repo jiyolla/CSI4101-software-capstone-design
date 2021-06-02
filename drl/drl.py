@@ -25,7 +25,7 @@ class DRL:
         self.seconds_per_batch = 10
         self.batch_size = int(self.seconds_per_batch / self.observation_interval)
         self.seconds_per_episode = 180
-        self.batches_per_episode = int(seconds_per_episode / seconds_per_batch)
+        self.batches_per_episode = int(self.seconds_per_episode / self.seconds_per_batch)
         self.explore_chance = 0.7
         self.final_explore_chance = 0.01
         self.explore_chance_decay = 0.995
