@@ -1,5 +1,8 @@
 ## A network-aware load balancer using DRL
 
+![alt text](https://github.com/jiyolla/CSI4101-software-capstone-design/blob/noacc/Design.png)
+
+
 ### Scenario:
 1. Client query load balancing server for inferencing server address.
 2. Load balancer return serving address using DRL.
