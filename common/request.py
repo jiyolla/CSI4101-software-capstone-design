@@ -5,6 +5,9 @@ import imagesize
 import numpy as np
 
 
+last_req_id = 0
+
+
 class Request:
     def __init__(self, unique_id, region, image_id, accuracy, time):
         self.unique_id = unique_id
