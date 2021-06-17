@@ -1,6 +1,6 @@
 ## A network-aware load balancer using DRL
 
-![alt text](https://github.com/jiyolla/CSI4101-software-capstone-design/blob//Design.png)
+![alt text](https://github.com/jiyolla/CSI4101-software-capstone-design/blob/main/Design.png)
 
 
 ### Scenario:
